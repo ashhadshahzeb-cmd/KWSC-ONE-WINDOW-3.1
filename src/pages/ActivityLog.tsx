@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,8 +30,10 @@ import {
   AlertCircle,
   Eye,
   BarChart3,
-  Wifi
+  Wifi,
+  Printer
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppConfig } from '@/hooks/useAppConfig';
 import {
@@ -156,6 +158,9 @@ export default function ActivityLog() {
   // New Features State
   const [isLive, setIsLive] = useState(true);
   const [selectedLog, setSelectedLog] = useState<ActivityLogEntry | null>(null);
+const [isPrinting, setIsPrinting] = useState(false);
+const [isDuplicatePrint, setIsDuplicatePrint] = useState(false);
+const printRef = useRef<HTMLDivElement>(null);
 
   // Filters
   const [page, setPage] = useState(0);
@@ -319,6 +324,23 @@ export default function ActivityLog() {
       case 'critical': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
       case 'warning': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
       default: return 'bg-sky-500/10 text-sky-400 border-sky-500/20';
+    }
+  };
+
+    // Print handling function – swaps body content with printable container
+  const handlePrint = () => {
+    if (printRef.current) {
+      const printContents = printRef.current.innerHTML;
+      const originalContents = document.body.innerHTML;
+      document.body.innerHTML = printContents;
+      window.print();
+      document.body.innerHTML = originalContents;
+      // Reset state after printing
+      setIsPrinting(false);
+      setSelectedLog(null);
+      setIsDuplicatePrint(false);
+      // Force re-render to clear residual refs
+      window.location.reload();
     }
   };
 
@@ -658,6 +680,21 @@ export default function ActivityLog() {
                               >
                                 <Eye className="w-3.5 h-3.5" />
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 bg-white/5 border border-white/10 hover:bg-white/10 rounded-lg text-white/60 hover:text-white"
+                                onClick={() => {
+                                  setSelectedLog(log);
+                                  setIsPrinting(true);
+                                  setTimeout(() => {
+                                    handlePrint();
+                                  }, 0);
+                                }}
+                                title="Print"
+                              >
+                                <Printer className="w-3.5 h-3.5" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         );
@@ -750,6 +787,32 @@ export default function ActivityLog() {
           </div>
         </DialogContent>
       </Dialog>
+{/* Printable container – hidden on screen, visible only during print */}
+<div className={`print-only hidden ${isPrinting ? '' : 'no-print'}`}>
+  <div ref={printRef} className="p-6 font-sans text-black bg-white min-h-[210mm] w-[148mm] mx-auto relative overflow-hidden">
+    {isDuplicatePrint && (
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
+        <div className="text-[100px] font-black uppercase text-gray-500/40 -rotate-45 select-none">
+          DUPLICATE
+        </div>
+      </div>
+    )}
+    {/* Printable content – reuse details from selectedLog */}
+    <div className="space-y-4">
+      <h2 className="text-lg font-bold">{selectedLog?.action} Details</h2>
+      <p className="text-sm">User: {selectedLog?.user_name} ({selectedLog?.user_role})</p>
+      <p className="text-sm">Date: {selectedLog ? new Date(selectedLog.created_at).toLocaleString() : ''}</p>
+      <p className="text-sm">Diary No: {selectedLog?.diary_number || 'N/A'}</p>
+      <p className="text-sm">Receiving No: {selectedLog?.receiving_number || 'N/A'}</p>
+      <p className="text-sm">Subject: {selectedLog?.subject || 'N/A'}</p>
+      {selectedLog?.details && (selectedLog.details.before !== undefined || selectedLog.details.after !== undefined) ? (
+        <DiffViewer before={selectedLog.details.before} after={selectedLog.details.after || selectedLog.details} />
+      ) : (
+        <PayloadViewer data={selectedLog?.details} />
+      )}
+    </div>
+  </div>
+</div>
     </div>
   );
 }

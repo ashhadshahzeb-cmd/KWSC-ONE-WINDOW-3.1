@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +44,7 @@ import {
   ScanLine,
   Wifi,
   WifiOff,
-  CloudOff
+  CloudOff, AlertTriangle
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState, useEffect, useRef } from "react";
@@ -502,6 +502,8 @@ export default function FileTracking() {
             });
             setIsEditingMode(true);
             setEditingRecordId(recordToEdit.id);
+            const existingImage = recordToEdit.file_image || (recordToEdit.history && recordToEdit.history.length > 0 && [...recordToEdit.history].reverse().find((h) => h.file_image)?.file_image) || "";
+            setFileImage(existingImage);
             
           } else if (newMsg.receiver_role === userRole && newMsg.message.startsWith('[FILE_TRACKING_EDIT_REJECTED]::' + recordToEdit.id)) {
             toast.error("Admin rejected edit request.");
@@ -548,6 +550,8 @@ export default function FileTracking() {
       });
       setIsEditingMode(true);
       setEditingRecordId(record.id);
+      const existingImage = record.file_image || (record.history && record.history.length > 0 && [...record.history].reverse().find((h) => h.file_image)?.file_image) || "";
+      setFileImage(existingImage);
     } else {
       setApprovalStatus("waiting");
       setIsEditModalOpen(true);
@@ -953,6 +957,8 @@ export default function FileTracking() {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [isJourneyMapOpen, setIsJourneyMapOpen] = useState(false);
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+  const [duplicateFound, setDuplicateFound] = useState<any>(null);
   const [qrFullScreen, setQrFullScreen] = useState<{ diary: string, receiving: string, print_date?: string, created_date?: string, subject?: string, mark_to?: string, additional_mark_to?: string, history?: any[] } | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -1168,7 +1174,7 @@ export default function FileTracking() {
     toast.success(`Verified Employee: ${emp.full_name}`);
   };
 
-  const handleSaveForm = async () => {
+  const handleSaveForm = async (bypassDuplicateCheck?: boolean | React.MouseEvent) => {
     const isEntryOperator = currentRole === 'entry_operator';
     const isSubCategoryRequired = formData.mainCategory !== 'impress' && formData.mainCategory !== 'pol_bills';
     
@@ -1183,6 +1189,56 @@ export default function FileTracking() {
         return;
       }
     }
+    const shouldBypass = bypassDuplicateCheck === true;
+    if (!isEditingMode && !isForwardingMode && !shouldBypass) {
+      try {
+        const inputSubject = formData.subject.trim();
+        const dateToCheck = formData.inward_date;
+        
+        // 1. Get local records for that date
+        let combinedRecords = await db.records.filter(r => r.inward_date === dateToCheck).toArray();
+
+        // 2. Get online records for that date (if online)
+        try {
+          if (navigator.onLine) {
+            const { data, error } = await supabase
+              .from('file_tracking_records' as any)
+              .select('*')
+              .eq('inward_date', dateToCheck);
+              
+            if (!error && data) {
+               // Merge avoiding duplicates
+               const localIds = new Set(combinedRecords.map(r => r.id));
+               const remoteUniques = data.filter(r => !localIds.has(r.id));
+               combinedRecords = [...combinedRecords, ...remoteUniques];
+            }
+          }
+        } catch (e) {
+          console.warn("Online duplicate check failed (might be offline):", e);
+        }
+
+        // 3. Run Fuzzy Search (using Fuse.js)
+        if (combinedRecords.length > 0 && inputSubject) {
+          const fuse = new Fuse(combinedRecords, {
+            keys: ['subject'],
+            includeScore: true,
+            threshold: 0.35 // 0.0 is perfect, 1.0 is mismatch. 0.35 allows minor typos/abbreviations
+          });
+
+          const results = fuse.search(inputSubject);
+          
+          if (results.length > 0) {
+             const bestMatch = results[0].item;
+             setDuplicateFound(bestMatch);
+             setIsDuplicateDialogOpen(true);
+             return;
+          }
+        }
+      } catch (err) {
+        console.error("Duplicate check error:", err);
+      }
+    }
+
     setIsSavingForm(true);
 
     try {
@@ -2006,20 +2062,42 @@ export default function FileTracking() {
           console.error("bulkPut error:", bulkErr);
         }
 
-        // MERGE: Retrieve local unsynced records that aren't in the mappedData yet
+        // MERGE: Retrieve local records not returned by Supabase query
+        // This handles two cases:
+        // 1. is_dirty=true records (not yet synced to Supabase)
+        // 2. Any local record missing from Supabase results (e.g. sync failed, wrong project, etc.)
         const rawLocalDirtyRecords = await db.records.filter(r => r.is_dirty && !r.deleted_locally).toArray();
         let mergedData = [...mappedData];
         
         rawLocalDirtyRecords.forEach(localRecord => {
           const idx = mergedData.findIndex(d => d.receiving_number === localRecord.receiving_number);
           if (idx === -1) {
-            // It's a new unsynced record, add it to the top
             mergedData.unshift(localRecord);
           } else {
-            // It's an updated unsynced record, override the Supabase one in UI
             mergedData[idx] = localRecord;
           }
         });
+
+        // If Supabase returned 0 results due to a search query, also include any
+        // local (non-dirty) records that match — so locally-only records always appear in search
+        if (mappedData.length === 0 && debouncedSearchQuery) {
+          const q = debouncedSearchQuery.toLowerCase().replace(/cf0-/gi, 'cfo-');
+          const extraLocalMatches = await db.records.filter(r =>
+            !r.deleted_locally &&
+            !rawLocalDirtyRecords.some(d => d.receiving_number === r.receiving_number) &&
+            (
+              (r.cfo_diary_number || '').toLowerCase().includes(q) ||
+              (r.receiving_number || '').toLowerCase().includes(q) ||
+              (r.subject || '').toLowerCase().includes(q) ||
+              (r.tracking_id || '').toLowerCase().includes(q) ||
+              (r.received_from || '').toLowerCase().includes(q)
+            )
+          ).toArray();
+          extraLocalMatches.forEach(localRecord => {
+            const idx = mergedData.findIndex(d => d.receiving_number === localRecord.receiving_number);
+            if (idx === -1) mergedData.unshift(localRecord);
+          });
+        }
 
         mergedData = applyLocalFilters(mergedData);
         setRecords(mergedData);
@@ -2352,11 +2430,37 @@ export default function FileTracking() {
         return;
       }
 
-      // 2. Fetch from DB if not in current page
+      // 2. Search full IndexedDB (all pages, not just current page)
+      const q = safeQuery.toLowerCase();
+      const fullLocalMatch = await db.records.filter(r =>
+        !r.deleted_locally &&
+        (
+          (r.tracking_id || '').toLowerCase().includes(q) ||
+          (r.cfo_diary_number || '').toLowerCase().includes(q) ||
+          (r.receiving_number || '').toLowerCase().includes(q) ||
+          (r.subject || '').toLowerCase().includes(q)
+        )
+      ).first();
+
+      if (fullLocalMatch) {
+        setSelectedBill({
+          ...fullLocalMatch,
+          diary_no: fullLocalMatch.cfo_diary_number || (fullLocalMatch as any).diary_no,
+          party_name: fullLocalMatch.received_from || (fullLocalMatch as any).party_name,
+          amount: fullLocalMatch.amount || 0,
+          history: fullLocalMatch.history || []
+        });
+        setCoveringSlipPrintDate(getLocalDateString((fullLocalMatch as any).created_at));
+        setCoveringSlipCreatedDate(getLocalDateString((fullLocalMatch as any).created_at));
+        toast.success("Found record in local storage");
+        return;
+      }
+
+      // 3. Fetch from Supabase — use safeQuery (CF0→CFO typo fix applied)
       const { data, error } = await supabase
         .from('file_tracking_records' as any)
         .select('*')
-        .or(`cfo_diary_number.ilike.%${searchQuery}%,receiving_number.ilike.%${searchQuery}%,tracking_id.ilike.%${searchQuery}%,subject.ilike.%${searchQuery}%`)
+        .or(`cfo_diary_number.ilike.%${safeQuery}%,receiving_number.ilike.%${safeQuery}%,tracking_id.ilike.%${safeQuery}%,subject.ilike.%${safeQuery}%`)
         .limit(1)
         .maybeSingle();
 
@@ -2373,6 +2477,7 @@ export default function FileTracking() {
         toast.success("Found record in database");
       } else {
         setSelectedBill(null);
+        toast.error(`No record found for "${safeQuery}"`);
       }
     } catch (err: any) {
       console.error(err);
@@ -6502,6 +6607,47 @@ export default function FileTracking() {
               </div>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isDuplicateDialogOpen} onOpenChange={setIsDuplicateDialogOpen}>
+        <DialogContent className="bg-[#0f1115] border-white/10 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-amber-500 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" /> Duplicate File Detected
+            </DialogTitle>
+            <DialogDescription className="text-white/70 mt-2">
+              A file with the same <strong>Subject</strong> and <strong>Date</strong> already exists in the system.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {duplicateFound && (
+            <div className="bg-white/5 p-4 rounded-xl border border-white/10 text-sm space-y-2 mt-4">
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-white/50">CFO Diary No:</span>
+                <span className="font-mono font-bold text-[#14b8a6]">{duplicateFound.cfo_diary_number}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/10 pb-2">
+                <span className="text-white/50">Subject:</span>
+                <span className="font-bold">{duplicateFound.subject}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-white/50">Date:</span>
+                <span className="font-bold">{duplicateFound.inward_date}</span>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter className="mt-6 flex gap-2 sm:justify-end">
+            <Button variant="outline" className="bg-transparent border-white/10 text-white hover:bg-white/5" onClick={() => setIsDuplicateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button className="bg-amber-500 hover:bg-amber-600 text-black font-bold" onClick={() => {
+              setIsDuplicateDialogOpen(false);
+              handleSaveForm(true);
+            }}>
+              Save Anyway
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

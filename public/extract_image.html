@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Extract CFO-2627-4-0078 Image</title>
+  <style>
+    body { background: #111; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+    #output { margin-top: 20px; width: 100%; max-width: 800px; }
+    img { max-width: 100%; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); margin-bottom: 20px; }
+    .btn { background: #14b8a6; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Local Database Image Extractor</h1>
+  <p>Click the button below to search your local browser database for CFO-2627-4-0078</p>
+  
+  <button class="btn" onclick="extractImage()">Find Image for CFO-2627-4-0078</button>
+  <button class="btn" onclick="dumpAll()" style="background:#ef4444">Show All Saved Images</button>
+
+  <div id="output"></div>
+
+  <script>
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open('KWSC_OneWindow_DB');
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror = e => reject(e);
+      });
+    }
+
+    async function extractImage() {
+      const out = document.getElementById('output');
+      out.innerHTML = 'Searching...<br>';
+      try {
+        const db = await openDB();
+        const storeNames = Array.from(db.objectStoreNames);
+        let found = false;
+
+        for (const storeName of storeNames) {
+          const tx = db.transaction([storeName], 'readonly');
+          const store = tx.objectStore(storeName);
+          const all = await new Promise(res => {
+            const r = store.getAll();
+            r.onsuccess = e => res(e.target.result);
+          });
+          
+          out.innerHTML += `Checked store <b>${storeName}</b>: ${all.length} records<br>`;
+
+          for (const r of all) {
+            const str = JSON.stringify(r);
+            if (str.includes('0078') && str.includes('data:image')) {
+              found = true;
+              out.innerHTML += `<hr><h3>Found in ${storeName}:</h3>`;
+              
+              // Find any base64 image in the record
+              const imgMatch = str.match(/(data:image\/[^;]+;base64,[^"']+)/);
+              if (imgMatch) {
+                out.innerHTML += `<img src="${imgMatch[0]}" /><br>`;
+                out.innerHTML += `<a href="${imgMatch[0]}" download="CFO-2627-4-0078_image.jpg" class="btn" style="text-decoration:none; display:inline-block">Download Image</a>`;
+              } else {
+                 out.innerHTML += `<p>Image data exists but couldn't parse it.</p>`;
+              }
+            }
+          }
+        }
+        
+        if (!found) {
+          out.innerHTML += `<h2 style="color:#ef4444">No image found for 0078 in your local browser storage.</h2>`;
+        }
+      } catch(e) {
+        out.innerHTML += `<p style="color:red">Error: ${e.message}</p>`;
+      }
+    }
+    
+    async function dumpAll() {
+      const out = document.getElementById('output');
+      out.innerHTML = 'Loading all images...<br>';
+      try {
+        const db = await openDB();
+        const tx = db.transaction(['records'], 'readonly');
+        const all = await new Promise(res => {
+          const r = tx.objectStore('records').getAll();
+          r.onsuccess = e => res(e.target.result);
+        });
+        
+        let count = 0;
+        for (const r of all) {
+          if (r.file_image) {
+            count++;
+            out.innerHTML += `<hr><h3>${r.cfo_diary_number || 'Unknown'}</h3>`;
+            out.innerHTML += `<img src="${r.file_image}" /><br>`;
+            out.innerHTML += `<a href="${r.file_image}" download="${r.cfo_diary_number || 'image'}.jpg" class="btn" style="text-decoration:none; display:inline-block">Download</a>`;
+          }
+        }
+        out.innerHTML += `<h3>Total images found: ${count}</h3>`;
+      } catch(e) {
+        out.innerHTML += `<p style="color:red">Error: ${e.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>

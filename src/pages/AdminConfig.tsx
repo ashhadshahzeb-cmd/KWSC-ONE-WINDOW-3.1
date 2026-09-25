@@ -33,6 +33,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { AppConfigItem, useAppConfig } from '@/hooks/useAppConfig';
 import PolBillsSettings from './book-section/PolBillsSettings';
+import WhatsAppManagementPanel from '@/components/whatsapp/WhatsAppManagementPanel';
+import { Smartphone } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -409,6 +411,11 @@ export default function AdminConfig() {
             <Fuel className="w-3.5 h-3.5 mr-1.5" />
             POL Bills Fields
           </TabsTrigger>
+          <TabsTrigger value="whatsapp_bot" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white rounded-lg font-semibold text-xs uppercase tracking-widest px-4 text-emerald-400">
+            <Smartphone className="w-3.5 h-3.5 mr-1.5 text-emerald-300" />
+            WhatsApp Bot
+            <Badge className="ml-2 bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0 border-emerald-500/30">Live</Badge>
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Main Categories Tab ─────────────────────────────────────────── */}
@@ -502,6 +509,11 @@ export default function AdminConfig() {
           <div className="bg-[#0f1115]/50 border border-white/5 rounded-[24px] p-6">
              <PolBillsSettings />
           </div>
+        </TabsContent>
+
+        {/* ── WhatsApp Bot Management Tab ──────────────────────────────────── */}
+        <TabsContent value="whatsapp_bot" className="space-y-4">
+          <WhatsAppManagementPanel />
         </TabsContent>
       </Tabs>
 
