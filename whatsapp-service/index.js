@@ -7,8 +7,16 @@ import cron from 'node-cron';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import http from 'http'; // Render Web Service Port Binding
 
 dotenv.config();
+
+// Dummy server for Render & UptimeRobot
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+    res.writeHead(200);
+    res.end('WhatsApp Bot is running!');
+}).listen(PORT, () => console.log(`🌐 Dummy Web Server running on port ${PORT}`));
 
 // ─── Helper: Convert base64 data URI to MessageMedia via temp file ───────────
 async function base64ToMedia(dataUri) {
@@ -213,7 +221,9 @@ const client = new Client({
         remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1023404884-alpha.html'
     },
     puppeteer: {
-        executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        executablePath: os.platform() === 'win32' 
+            ? 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' 
+            : '/usr/bin/chromium-browser',
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
     }
 });
@@ -323,7 +333,7 @@ client.on('message', async (msg) => {
                 `📋 *5. BILLS <Category>*\n` +
                 `_Example:_ \`POL BILLS\`, \`MEDICAL BILLS\`, \`CONTRACTOR BILLS\`\n\n` +
                 `⏳ *6. PENDING* (ya *DELAYED*)\n` +
-                `_${DELAYED_THRESHOLD_DAYS} din se zyada ruki hui delayed files ki list._\n` +
+                `_${activeDelayedThresholdDays} din se zyada ruki hui delayed files ki list._\n` +
                 `━━━━━━━━━━━━━━━━━━━━\n` +
                 `🏛️ *KWSC One Window System*`;
             await msg.reply(helpMsg);
@@ -603,7 +613,7 @@ async function handleSummaryQuery(msg, rawArg = '') {
 // Handler for PENDING query
 async function handlePendingQuery(msg) {
     const thresholdDate = new Date();
-    thresholdDate.setDate(thresholdDate.getDate() - DELAYED_THRESHOLD_DAYS);
+    thresholdDate.setDate(thresholdDate.getDate() - activeDelayedThresholdDays);
     const thresholdIso = thresholdDate.toISOString().split('T')[0];
 
     const { data: delayedFiles, error } = await supabase
@@ -623,12 +633,12 @@ async function handlePendingQuery(msg) {
     if (!delayedFiles || delayedFiles.length === 0) {
         await msg.reply(
             `✅ *All Clear!*\n` +
-            `Koi aisi file nahi jo ${DELAYED_THRESHOLD_DAYS} din se zyada ruki hui ho.`
+            `Koi aisi file nahi jo ${activeDelayedThresholdDays} din se zyada ruki hui ho.`
         );
         return;
     }
 
-    let listText = `⏳ *Delayed Files Alert (> ${DELAYED_THRESHOLD_DAYS} Days)*\n━━━━━━━━━━━━━━━━━━━━\n`;
+    let listText = `⏳ *Delayed Files Alert (> ${activeDelayedThresholdDays} Days)*\n━━━━━━━━━━━━━━━━━━━━\n`;
     const today = new Date();
 
     delayedFiles.forEach((f, idx) => {
@@ -813,7 +823,7 @@ async function calculateSummaryMetrics(options = { mode: 'single', targetDate: g
     (activeFiles || []).forEach(f => {
         const fileDate = new Date(f.inward_date || f.created_at);
         const diffDays = Math.floor((today - fileDate) / (1000 * 60 * 60 * 24));
-        if (diffDays >= DELAYED_THRESHOLD_DAYS) {
+        if (diffDays >= activeDelayedThresholdDays) {
             delayedCount++;
         }
         const sec = f.mark_to || 'Unassigned';
@@ -854,7 +864,7 @@ function formatDailyDigestMessage(summary, headerTitle = 'Daily Evening Digest')
         `📤 *Forwarded (${periodLabel}):* ${summary.forwardedCount}\n` +
         `✅ *Disposed / Outwarded (${periodLabel}):* ${summary.disposedCount}\n` +
         `⏳ *Total Active Pending Files:* ${summary.totalPendingCount}\n` +
-        `⚠️ *Delayed Files (> ${DELAYED_THRESHOLD_DAYS} Days):* ${summary.delayedCount}\n\n` +
+        `⚠️ *Delayed Files (> ${activeDelayedThresholdDays} Days):* ${summary.delayedCount}\n\n` +
         `🏢 *Top Sections (Current Pending):*\n` +
         (topSections || '• All clear / No pending files') + `\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
