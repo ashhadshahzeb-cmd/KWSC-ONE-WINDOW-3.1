@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThreeDLoginBackground from '@/components/auth/ThreeDLoginBackground';
 import { QRCodeSVG } from 'qrcode.react';
+import { useAppConfig } from '@/hooks/useAppConfig';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,6 +26,7 @@ export default function AuthPage() {
   
   const navigate = useNavigate();
   const { localSignIn } = useAuth();
+  const { isGlobal2FAEnabled } = useAppConfig();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +38,13 @@ export default function AuthPage() {
         if (localResult.success) {
           
           if (localResult.method === 'supabase') {
+            if (!isGlobal2FAEnabled) {
+              toast.success('Welcome! Login successful.');
+              navigate('/dashboard');
+              setLoading(false);
+              return;
+            }
+
             // Check MFA Status
             const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
             

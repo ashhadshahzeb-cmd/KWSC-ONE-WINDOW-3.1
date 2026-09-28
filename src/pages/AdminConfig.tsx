@@ -34,13 +34,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { AppConfigItem, useAppConfig } from '@/hooks/useAppConfig';
 import PolBillsSettings from './book-section/PolBillsSettings';
 import WhatsAppManagementPanel from '@/components/whatsapp/WhatsAppManagementPanel';
+import ContractorAccountsPanel from '@/components/ContractorAccountsPanel';
 import { Smartphone } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-type ConfigType = 'main_category' | 'sub_category' | 'section';
+type ConfigType = 'main_category' | 'sub_category' | 'section' | 'contractor_account';
 
 interface FormState {
   config_key: string;
@@ -64,17 +65,20 @@ export default function AdminConfig() {
   const [authPassword, setAuthPassword] = useState('');
   const [showAuthPass, setShowAuthPass] = useState(false);
 
-  const { mainCategories, subCategories, sections, isMaintenanceMode, isLoading, refetch } = useAppConfig();
+  const { mainCategories, subCategories, sections, contractorAccounts, isMaintenanceMode, isGlobal2FAEnabled, isFileEditPasswordEnabled, isLoading, refetch } = useAppConfig();
   const [isTogglingMaintenance, setIsTogglingMaintenance] = useState(false);
+  const [isTogglingSecurity, setIsTogglingSecurity] = useState(false);
 
   // Local state (mirrored from hook so we can do optimistic updates)
   const [localMain, setLocalMain] = useState<AppConfigItem[]>([]);
   const [localSub, setLocalSub]   = useState<AppConfigItem[]>([]);
   const [localSec, setLocalSec]   = useState<AppConfigItem[]>([]);
+  const [localContractor, setLocalContractor] = useState<AppConfigItem[]>([]);
 
   useEffect(() => { setLocalMain(mainCategories); }, [mainCategories]);
   useEffect(() => { setLocalSub(subCategories);   }, [subCategories]);
   useEffect(() => { setLocalSec(sections);         }, [sections]);
+  useEffect(() => { setLocalContractor(contractorAccounts); }, [contractorAccounts]);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -158,7 +162,7 @@ export default function AdminConfig() {
       ...EMPTY_FORM,
       parent_key: type === 'sub_category' && selectedParent !== 'all' ? selectedParent : '',
       sort_order: String(
-        (type === 'main_category' ? localMain : type === 'sub_category' ? localSub : localSec).length + 1
+        (type === 'main_category' ? localMain : type === 'sub_category' ? localSub : type === 'section' ? localSec : localContractor).length + 1
       ),
     });
     setDialogOpen(true);
@@ -315,6 +319,32 @@ export default function AdminConfig() {
     }
   };
 
+  // ── Security Toggles ────────────────────────────────────────────────────────
+  const handleToggleSecuritySetting = async (key: string, checked: boolean) => {
+    setIsTogglingSecurity(true);
+    try {
+      const { data: existing } = await supabase
+        .from('app_config' as any)
+        .select('id')
+        .eq('config_type', 'system_setting')
+        .eq('config_key', key)
+        .maybeSingle();
+
+      const val = checked ? 'true' : 'false';
+      if (existing) {
+        await supabase.from('app_config' as any).update({ config_label: val }).eq('id', existing.id);
+      } else {
+        await supabase.from('app_config' as any).insert({ config_type: 'system_setting', config_key: key, config_label: val, is_active: true, sort_order: 0 });
+      }
+      toast.success(`${key === 'global_2fa_enabled' ? 'Global 2FA' : 'File Edit Password'} updated`);
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update security setting');
+    } finally {
+      setIsTogglingSecurity(false);
+    }
+  };
+
   // ── UI ──────────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-16">
@@ -389,6 +419,49 @@ export default function AdminConfig() {
         </CardContent>
       </Card>
 
+      {/* Security Settings */}
+      <Card className="bg-[#0f1115]/50 border-blue-500/20 shadow-lg mt-4">
+        <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div className="flex items-center justify-between border-b border-white/5 pb-4 md:border-b-0 md:pb-0 md:border-r md:pr-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                <ShieldAlert className="w-5 h-5 text-blue-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Global 2FA (Authenticator)</h3>
+                <p className="text-xs text-white/50">Require 2FA for all users on login</p>
+              </div>
+            </div>
+            <Switch 
+              checked={isGlobal2FAEnabled}
+              onCheckedChange={(c) => handleToggleSecuritySetting('global_2fa_enabled', c)}
+              disabled={isTogglingSecurity}
+              className="data-[state=checked]:bg-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                <Edit2 className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">File Edit / Delete Password</h3>
+                <p className="text-xs text-white/50">Require password to edit/delete file tracking records</p>
+              </div>
+            </div>
+            <Switch 
+              checked={isFileEditPasswordEnabled}
+              onCheckedChange={(c) => handleToggleSecuritySetting('file_edit_password_enabled', c)}
+              disabled={isTogglingSecurity}
+              className="data-[state=checked]:bg-emerald-500"
+            />
+          </div>
+
+        </CardContent>
+      </Card>
+
       {/* Tabs */}
       <Tabs defaultValue="main_category" className="space-y-4">
         <TabsList className="bg-white/5 border border-white/10 rounded-xl p-1 gap-1">
@@ -406,6 +479,11 @@ export default function AdminConfig() {
             <Building2 className="w-3.5 h-3.5 mr-1.5" />
             Sections / Mark-To
             <Badge className="ml-2 bg-white/10 text-white text-[10px] px-1.5 py-0">{localSec.length}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="contractor_account" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white rounded-lg font-semibold text-xs uppercase tracking-widest px-4">
+            <Building2 className="w-3.5 h-3.5 mr-1.5" />
+            Contractors
+            <Badge className="ml-2 bg-white/10 text-white text-[10px] px-1.5 py-0">{localContractor.length}</Badge>
           </TabsTrigger>
           <TabsTrigger value="pol_bills" className="data-[state=active]:bg-violet-600 data-[state=active]:text-white rounded-lg font-semibold text-xs uppercase tracking-widest px-4">
             <Fuel className="w-3.5 h-3.5 mr-1.5" />
@@ -502,6 +580,11 @@ export default function AdminConfig() {
             onToggle={handleToggleActive}
             showParent={false}
           />
+        </TabsContent>
+
+        {/* ── Contractor Accounts Tab ─────────────────────────────────────── */}
+        <TabsContent value="contractor_account" className="space-y-4">
+          <ContractorAccountsPanel />
         </TabsContent>
 
         {/* ── POL Bills Custom Fields Tab ─────────────────────────────────── */}

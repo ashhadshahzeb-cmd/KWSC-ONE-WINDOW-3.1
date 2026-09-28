@@ -15,6 +15,7 @@ import { FileEdit, CheckSquare } from 'lucide-react';
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAppConfig } from "@/hooks/useAppConfig";
 
 export default function TransferAdviceRecords() {
   const [records, setRecords] = useState<any[]>([]);
@@ -27,6 +28,7 @@ export default function TransferAdviceRecords() {
   const [filterInRespectOf, setFilterInRespectOf] = useState('All');
   
   const { userRole, userName, isAdmin, verifyPassword } = useAuth();
+  const { isFileEditPasswordEnabled } = useAppConfig();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
   const [editPassword, setEditPassword] = useState("");
@@ -122,6 +124,10 @@ export default function TransferAdviceRecords() {
     if (isAdmin) {
       setIsEditModalOpen(true);
     } else {
+      if (!isFileEditPasswordEnabled) {
+        setIsEditModalOpen(true);
+        return;
+      }
       setApprovalStatus("waiting");
       setIsApprovalModalOpen(true);
       
@@ -137,7 +143,7 @@ export default function TransferAdviceRecords() {
   };
 
   const handlePasswordOverride = () => {
-    if (!verifyPassword(editPassword)) {
+    if (isFileEditPasswordEnabled && !verifyPassword(editPassword)) {
       toast.error("Incorrect password.");
       return;
     }

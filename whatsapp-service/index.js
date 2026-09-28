@@ -1,11 +1,29 @@
 import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
+const { Client, LocalAuth, MessageMedia } = pkg;
 import qrcode from 'qrcode-terminal';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import cron from 'node-cron';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 dotenv.config();
+
+// ─── Helper: Convert base64 data URI to MessageMedia via temp file ───────────
+async function base64ToMedia(dataUri) {
+    const match = dataUri.match(/^data:(.*?);base64,(.*)$/);
+    if (!match) throw new Error('Invalid base64 data URI');
+    const [, mime, b64] = match;
+    const ext = mime.split('/')[1]?.split('+')[0] || 'jpg';
+    const tmpFile = path.join(os.tmpdir(), `kwsc_doc_${Date.now()}.${ext}`);
+    fs.writeFileSync(tmpFile, Buffer.from(b64, 'base64'));
+    const media = MessageMedia.fromFilePath(tmpFile);
+    // cleanup after 30 seconds
+    setTimeout(() => { try { fs.unlinkSync(tmpFile); } catch (_) {} }, 30000);
+    return media;
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Configuration & Constants
@@ -49,9 +67,12 @@ async function loadDynamicConfigFromSupabase() {
                 try {
                     if (item.config_key === 'target_numbers' && item.config_label) {
                         const parsed = JSON.parse(item.config_label);
-                        if (Array.isArray(parsed)) {
-                            activeTargetNumbers = parsed.filter(n => n.enabled !== false).map(n => n.number);
-                            console.log(`📱 Dynamic Target Numbers Synced (${activeTargetNumbers.length}):`, activeTargetNumbers);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            const filtered = parsed.filter(n => n.enabled !== false).map(n => n.number);
+                            if (filtered.length > 0) {
+                                activeTargetNumbers = filtered;
+                                console.log(`📱 Dynamic Target Numbers Synced (${activeTargetNumbers.length}):`, activeTargetNumbers);
+                            }
                         }
                     } else if (item.config_key === 'allowed_sections' && item.config_label) {
                         activeAllowedSections = JSON.parse(item.config_label);
@@ -128,6 +149,10 @@ async function logWhatsAppEvent(type, phone, senderName, message, actionType = '
     }
 }
 
+// Guard flags to prevent duplicate subscriptions/cron on repeated 'ready' events
+let isSubscribed = false;
+let isCronStarted = false;
+
 // Cache to prevent duplicate notifications for same event in a short window (10 seconds)
 const recentNotificationsCache = new Map();
 function isDuplicateNotification(key) {
@@ -183,9 +208,13 @@ function getPktDateFormatted(date = new Date()) {
 // ─────────────────────────────────────────────────────────────────────────────
 const client = new Client({
     authStrategy: new LocalAuth(),
+    webVersionCache: {
+        type: 'remote',
+        remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1023404884-alpha.html'
+    },
     puppeteer: {
         executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu']
     }
 });
 
@@ -205,8 +234,17 @@ client.on('ready', async () => {
         phone_name: client.info?.pushname || 'KWSC Bot Service'
     });
 
-    subscribeToDatabase();
-    startCronJobs();
+    // Guard: only subscribe once (prevents crash if 'ready' fires multiple times)
+    if (!isSubscribed) {
+        isSubscribed = true;
+        subscribeToDatabase();
+    }
+
+    // Guard: only start cron jobs once
+    if (!isCronStarted) {
+        isCronStarted = true;
+        startCronJobs();
+    }
 
     // Heartbeat every 30s
     setInterval(() => {
@@ -440,6 +478,25 @@ async function handleStatusQuery(msg, rawQuery, searchType = 'all') {
             historyText + `\n` +
             `━━━━━━━━━━━━━━━━━━━━\n` +
             `🕐 _Queried on ${getPktDateTimeFormatted()}_`;
+
+        const fileImageUrl = data.file_image || (historyList.length > 0 && historyList[historyList.length - 1]?.file_image) || null;
+
+        if (fileImageUrl && (fileImageUrl.startsWith('http') || fileImageUrl.startsWith('data:image'))) {
+            try {
+                let media;
+                if (fileImageUrl.startsWith('data:')) {
+                    media = await base64ToMedia(fileImageUrl);
+                } else {
+                    media = await MessageMedia.fromUrl(fileImageUrl, { unsafeMime: true });
+                }
+                console.log('🖼️ Sending document image to requester...');
+                await msg.reply(reply);
+                await client.sendMessage(msg.from, media);
+                return;
+            } catch (mediaErr) {
+                console.warn('⚠️ Could not send image for STATUS query:', mediaErr.message);
+            }
+        }
 
         await msg.reply(reply);
         return;
@@ -887,7 +944,7 @@ function subscribeToDatabase() {
     // ─── Listen: file_tracking_records (New File Created) ───
     supabase
         .channel('file-tracking-inserts')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'file_tracking_records' }, (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'file_tracking_records' }, async (payload) => {
             const f = payload.new;
             if (!isRecordEligibleForNotification(f)) {
                 console.log(`⏩ [Filter] Skipping insert alert for ${f.cfo_diary_number || f.receiving_number} (Section: "${f.mark_to}", Category: "${f.main_category}")`);
@@ -908,19 +965,39 @@ function subscribeToDatabase() {
                 `👤 *Handover Person:* ${f.received_from || f.handover_person_name || 'N/A'}\n` +
                 `🏢 *Section:* ${f.mark_to || 'N/A'}\n` +
                 `🕐 *Time:* ${getPktDateTimeFormatted()}`;
-            broadcastToAllTargets(msg);
+
+            // Check for attached file image
+            const historyArr = Array.isArray(f.history) ? f.history : [];
+            const fileImageUrl = f.file_image || (historyArr.length > 0 && historyArr[historyArr.length - 1]?.file_image) || null;
+            if (fileImageUrl && (fileImageUrl.startsWith('http') || fileImageUrl.startsWith('data:image'))) {
+                await broadcastWithMedia(msg, fileImageUrl);
+            } else {
+                await broadcastToAllTargets(msg);
+            }
+
+            // Direct Contractor Notification
+            if (f.main_category === 'contractor' && f.employee_number) {
+                const contractorMsg = `👷‍♂️ *Contractor Alert - KWSC*\n━━━━━━━━━━━━━━━━━━━━\nHello ${f.received_from || 'Contractor'},\nA new file has been registered under your account.\n\n${msg}`;
+                await sendDirectMessage(f.employee_number, contractorMsg, fileImageUrl && (fileImageUrl.startsWith('http') || fileImageUrl.startsWith('data:image')) ? fileImageUrl : null);
+            }
         })
         .subscribe((status) => console.log('📡 file_tracking_records INSERT channel:', status));
 
-    // ─── Listen: file_tracking_records (File Updated / Moved) ───
+    // ─── Listen: file_tracking_records (File Updated / Moved / Edited) ───
     supabase
         .channel('file-tracking-updates')
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'file_tracking_records' }, (payload) => {
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'file_tracking_records' }, async (payload) => {
             const f = payload.new;
             const old = payload.old || {};
 
-            // Only notify if meaningful fields changed (mark_to, status, outward_date, cfo_diary_number)
-            if (old.mark_to === f.mark_to && old.status === f.status && old.outward_date === f.outward_date) {
+            // Detect if this is a file EDIT (history contains EDITED action that wasn't there before)
+            const newHistory = Array.isArray(f.history) ? f.history : [];
+            const oldHistory = Array.isArray(old.history) ? old.history : [];
+            const isFileEdit = newHistory.length > oldHistory.length && 
+                newHistory.some(h => h.action === 'EDITED' && !oldHistory.some(oh => oh.date === h.date));
+
+            // Only notify if meaningful fields changed (mark_to, status, outward_date) OR it's a file edit
+            if (!isFileEdit && old.mark_to === f.mark_to && old.status === f.status && old.outward_date === f.outward_date) {
                 return; // Minor edit (e.g. remarks or sync metadata), ignore to prevent spam
             }
 
@@ -929,21 +1006,61 @@ function subscribeToDatabase() {
                 return;
             }
 
-            const eventKey = `UPDATE_FILE_${f.id || f.receiving_number}_${f.mark_to}`;
+            const eventKey = isFileEdit 
+                ? `EDIT_FILE_${f.id || f.receiving_number}_${Date.now()}`
+                : `UPDATE_FILE_${f.id || f.receiving_number}_${f.mark_to}`;
             if (isDuplicateNotification(eventKey)) return;
 
-            console.log('✏️ File Updated/Moved (Filtered):', f.cfo_diary_number || f.receiving_number);
-            const msg =
-                `✏️ *File Updated / Moved!*\n` +
-                `━━━━━━━━━━━━━━━━━━━━\n` +
-                `📌 *CFO Diary No:* ${f.cfo_diary_number || 'N/A'}\n` +
-                `📌 *Receiving No:* ${f.receiving_number || 'N/A'}\n` +
-                `📂 *Category:* ${f.main_category || 'N/A'}\n` +
-                `📝 *Subject:* ${f.subject || 'N/A'}\n` +
-                `📍 *Current Section:* ${f.mark_to || 'N/A'}\n` +
-                `⚙️ *Status:* ${f.status || (f.outward_date ? 'Outwarded' : 'In Process')}\n` +
-                `🕐 *Time:* ${getPktDateTimeFormatted()}`;
-            broadcastToAllTargets(msg);
+            // Get the latest edit details from history
+            const latestEdit = isFileEdit ? newHistory.filter(h => h.action === 'EDITED').pop() : null;
+            const editedBy = latestEdit?.processed_by || 'Unknown';
+
+            if (isFileEdit) {
+                console.log('📝 File EDITED (Filtered):', f.cfo_diary_number || f.receiving_number, 'by', editedBy);
+                const msg =
+                    `📝 *File Edited!*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `📌 *CFO Diary No:* ${f.cfo_diary_number || 'N/A'}\n` +
+                    `📌 *Receiving No:* ${f.receiving_number || 'N/A'}\n` +
+                    `📂 *Category:* ${f.main_category || 'N/A'}\n` +
+                    `📝 *Subject:* ${f.subject || 'N/A'}\n` +
+                    `💰 *Amount:* Rs. ${f.amount ? Number(f.amount).toLocaleString('en-PK') : '0'}\n` +
+                    `👤 *Received From:* ${f.received_from || f.handover_person_name || 'N/A'}\n` +
+                    `🏢 *Section:* ${f.mark_to || 'N/A'}\n` +
+                    `✏️ *Edited By:* ${editedBy}\n` +
+                    `🕐 *Time:* ${getPktDateTimeFormatted()}`;
+
+                // Check for file image in history or root
+                const fileImageUrl = latestEdit?.file_image || f.file_image || null;
+                if (fileImageUrl && (fileImageUrl.startsWith('http') || fileImageUrl.startsWith('data:image'))) {
+                    await broadcastWithMedia(msg, fileImageUrl);
+                } else {
+                    await broadcastToAllTargets(msg);
+                }
+
+                if (f.main_category === 'contractor' && f.employee_number) {
+                    const contractorMsg = `👷‍♂️ *Contractor Alert - KWSC*\n━━━━━━━━━━━━━━━━━━━━\nHello ${f.received_from || 'Contractor'},\nYour file has been updated/edited.\n\n${msg}`;
+                    await sendDirectMessage(f.employee_number, contractorMsg, fileImageUrl && (fileImageUrl.startsWith('http') || fileImageUrl.startsWith('data:image')) ? fileImageUrl : null);
+                }
+            } else {
+                console.log('✏️ File Updated/Moved (Filtered):', f.cfo_diary_number || f.receiving_number);
+                const msg =
+                    `✏️ *File Updated / Moved!*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `📌 *CFO Diary No:* ${f.cfo_diary_number || 'N/A'}\n` +
+                    `📌 *Receiving No:* ${f.receiving_number || 'N/A'}\n` +
+                    `📂 *Category:* ${f.main_category || 'N/A'}\n` +
+                    `📝 *Subject:* ${f.subject || 'N/A'}\n` +
+                    `📍 *Current Section:* ${f.mark_to || 'N/A'}\n` +
+                    `⚙️ *Status:* ${f.status || (f.outward_date ? 'Outwarded' : 'In Process')}\n` +
+                    `🕐 *Time:* ${getPktDateTimeFormatted()}`;
+                await broadcastToAllTargets(msg);
+
+                if (f.main_category === 'contractor' && f.employee_number) {
+                    const contractorMsg = `👷‍♂️ *Contractor Alert - KWSC*\n━━━━━━━━━━━━━━━━━━━━\nHello ${f.received_from || 'Contractor'},\nYour file status has been updated.\n\n${msg}`;
+                    await sendDirectMessage(f.employee_number, contractorMsg);
+                }
+            }
         })
         .subscribe((status) => console.log('📡 file_tracking_records UPDATE channel:', status));
 
@@ -957,7 +1074,7 @@ function subscribeToDatabase() {
                 return;
             }
 
-            if (['FORWARD', 'DELETE'].includes(a.action)) {
+            if (['FORWARD', 'DELETE', 'EDIT'].includes(a.action)) {
                 // Fetch associated file to check category & section filter
                 let targetRecord = null;
                 if (a.record_id) {
@@ -994,6 +1111,79 @@ function subscribeToDatabase() {
 // ─────────────────────────────────────────────────────────────────────────────
 // 5. Broadcast Helper
 // ─────────────────────────────────────────────────────────────────────────────
+async function sendDirectMessage(targetNumber, message, imageUrl = null) {
+    if (!targetNumber) return;
+    
+    // Ensure number has country code (defaulting to Pakistan 92) and ends with @c.us
+    let cleanNumber = targetNumber.replace(/\D/g, '');
+    if (cleanNumber.startsWith('0')) {
+        cleanNumber = '92' + cleanNumber.substring(1);
+    } else if (!cleanNumber.startsWith('92') && cleanNumber.length === 10) {
+        cleanNumber = '92' + cleanNumber;
+    }
+    const chatId = `${cleanNumber}@c.us`;
+
+    try {
+        if (imageUrl) {
+            try {
+                let media;
+                if (imageUrl.startsWith('data:')) {
+                    media = await base64ToMedia(imageUrl);
+                } else {
+                    media = await MessageMedia.fromUrl(imageUrl, { unsafeMime: true });
+                }
+                await client.sendMessage(chatId, message);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await client.sendMessage(chatId, media);
+                console.log(`✅ Direct media message sent to contractor ${cleanNumber}`);
+            } catch (mediaErr) {
+                console.warn(`⚠️ Could not send media to contractor ${cleanNumber}, sending text only:`, mediaErr.message);
+                await client.sendMessage(chatId, message);
+            }
+        } else {
+            await client.sendMessage(chatId, message);
+            console.log(`✅ Direct message sent to contractor ${cleanNumber}`);
+        }
+        await logWhatsAppEvent('OUTGOING', cleanNumber, 'KWSC Bot (Contractor Direct)', message, 'WHATSAPP_BROADCAST');
+    } catch (error) {
+        console.error(`❌ Failed to send direct message to ${cleanNumber}:`, error.message);
+    }
+}
+async function broadcastWithMedia(message, imageUrl) {
+    if (activeTargetNumbers.length === 0) {
+        console.log("⚠️ No active target phone numbers configured. Skipping media broadcast.");
+        return;
+    }
+    let media = null;
+    try {
+        if (imageUrl.startsWith('data:')) {
+            media = await base64ToMedia(imageUrl);
+            console.log('🖼️ Media prepared from base64 temp file.');
+        } else {
+            media = await MessageMedia.fromUrl(imageUrl, { unsafeMime: true });
+            console.log('🖼️ Media downloaded from URL for broadcast.');
+        }
+    } catch (mediaErr) {
+        console.warn('⚠️ Could not prepare media, sending text only:', mediaErr.message);
+        await broadcastToAllTargets(message);
+        return;
+    }
+    for (const number of activeTargetNumbers) {
+        try {
+            await client.sendMessage(number, message);
+            if (media) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await client.sendMessage(number, media);
+            }
+            console.log(`✅ Media message broadcasted to ${number}`);
+            await logWhatsAppEvent('OUTGOING', number, 'KWSC Bot', message, 'WHATSAPP_BROADCAST');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (error) {
+            console.error(`❌ Failed to send media broadcast to ${number}:`, error.message);
+        }
+    }
+}
+
 async function broadcastToAllTargets(message) {
     if (activeTargetNumbers.length === 0) {
         console.log("⚠️ No active target phone numbers configured. Skipping broadcast.");

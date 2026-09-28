@@ -1,3 +1,9 @@
-2026/09/24-14:02:11.882 181c Reusing MANIFEST D:\Offical-Data\KWSC-ONE-WINDOW-FACI-main\whatsapp-service\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
-2026/09/24-14:02:11.884 181c Recovering log #7
-2026/09/24-14:02:11.886 181c Reusing old log D:\Offical-Data\KWSC-ONE-WINDOW-FACI-main\whatsapp-service\.wwebjs_auth\session\Default\Local Storage\leveldb/000007.log 
+2026/09/28-12:14:12.532 21a8 Reusing MANIFEST D:\Offical-Data\KWSC-ONE-WINDOW-FACI-main\whatsapp-service\.wwebjs_auth\session\Default\Local Storage\leveldb/MANIFEST-000001
+2026/09/28-12:14:12.534 21a8 Recovering log #3
+2026/09/28-12:14:12.536 21a8 Reusing old log D:\Offical-Data\KWSC-ONE-WINDOW-FACI-main\whatsapp-service\.wwebjs_auth\session\Default\Local Storage\leveldb/000003.log 
+2026/09/28-12:15:12.541 1f2c Level-0 table #5: started
+2026/09/28-12:15:12.546 1f2c Level-0 table #5: 17373 bytes OK
+2026/09/28-12:15:12.550 1f2c Delete type=0 #3
+2026/09/28-15:41:51.140 1f2c Level-0 table #7: started
+2026/09/28-15:41:51.149 1f2c Level-0 table #7: 14031 bytes OK
+2026/09/28-15:41:51.155 1f2c Delete type=0 #4

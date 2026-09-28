@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 
 export interface AppConfigItem {
   id: string;
-  config_type: 'main_category' | 'sub_category' | 'section' | 'system_setting';
+  config_type: 'main_category' | 'sub_category' | 'section' | 'system_setting' | 'contractor_account';
   config_key: string;
   config_label: string;
   parent_key: string | null;
@@ -16,21 +16,27 @@ interface AppConfigState {
   mainCategories: AppConfigItem[];
   subCategories: AppConfigItem[];
   sections: AppConfigItem[];
+  contractorAccounts: AppConfigItem[];
   isMaintenanceMode: boolean;
+  isGlobal2FAEnabled: boolean;
+  isFileEditPasswordEnabled: boolean;
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
 }
 
 // In-memory cache so every component doesn't re-fetch
-let cachedConfig: { mainCategories: AppConfigItem[]; subCategories: AppConfigItem[]; sections: AppConfigItem[]; isMaintenanceMode: boolean } | null = null;
+let cachedConfig: { mainCategories: AppConfigItem[]; subCategories: AppConfigItem[]; sections: AppConfigItem[]; contractorAccounts: AppConfigItem[]; isMaintenanceMode: boolean; isGlobal2FAEnabled: boolean; isFileEditPasswordEnabled: boolean } | null = null;
 let cachePromise: Promise<void> | null = null;
 
 export function useAppConfig(): AppConfigState {
   const [mainCategories, setMainCategories] = useState<AppConfigItem[]>([]);
   const [subCategories, setSubCategories]   = useState<AppConfigItem[]>([]);
   const [sections, setSections]             = useState<AppConfigItem[]>([]);
+  const [contractorAccounts, setContractorAccounts] = useState<AppConfigItem[]>([]);
   const [isMaintenanceMode, setIsMaintenanceMode] = useState(false);
+  const [isGlobal2FAEnabled, setIsGlobal2FAEnabled] = useState(true);
+  const [isFileEditPasswordEnabled, setIsFileEditPasswordEnabled] = useState(true);
   const [isLoading, setIsLoading]           = useState(true);
   const [error, setError]                   = useState<string | null>(null);
 
@@ -47,6 +53,7 @@ export function useAppConfig(): AppConfigState {
       const mc = localConfigs.filter(r => r.config_type === 'main_category') as AppConfigItem[];
       const sc = localConfigs.filter(r => r.config_type === 'sub_category') as AppConfigItem[];
       const se = localConfigs.filter(r => r.config_type === 'section') as AppConfigItem[];
+      const ca = localConfigs.filter(r => r.config_type === 'contractor_account') as AppConfigItem[];
       const sys = localConfigs.filter(r => r.config_type === 'system_setting') as AppConfigItem[];
       
       const isManualForce = sys.find(s => s.config_key === 'maintenance_mode')?.config_label === 'true';
@@ -56,12 +63,17 @@ export function useAppConfig(): AppConfigState {
       const todayStr = now.toISOString().split('T')[0];
       const isAuto = currentHour >= 17;
       const maint = isManualForce || (isAuto && overrideDateStr !== todayStr);
-
+      
+      const is2FA = sys.find(s => s.config_key === 'global_2fa_enabled')?.config_label !== 'false';
+      const isFileEditPass = sys.find(s => s.config_key === 'file_edit_password_enabled')?.config_label !== 'false';
 
       setMainCategories(mc);
       setSubCategories(sc);
       setSections(se);
+      setContractorAccounts(ca);
       setIsMaintenanceMode(maint);
+      setIsGlobal2FAEnabled(is2FA);
+      setIsFileEditPasswordEnabled(isFileEditPass);
       setIsLoading(false);
       setError(null);
       // Still try to refresh from Supabase in background (don't await)
@@ -74,7 +86,10 @@ export function useAppConfig(): AppConfigState {
       setMainCategories(cachedConfig.mainCategories);
       setSubCategories(cachedConfig.subCategories);
       setSections(cachedConfig.sections);
+      setContractorAccounts(cachedConfig.contractorAccounts);
       setIsMaintenanceMode(cachedConfig.isMaintenanceMode);
+      setIsGlobal2FAEnabled(cachedConfig.isGlobal2FAEnabled);
+      setIsFileEditPasswordEnabled(cachedConfig.isFileEditPasswordEnabled);
       setIsLoading(false);
       return;
     }
@@ -85,6 +100,7 @@ export function useAppConfig(): AppConfigState {
         setMainCategories(cachedConfig.mainCategories);
         setSubCategories(cachedConfig.subCategories);
         setSections(cachedConfig.sections);
+        setContractorAccounts(cachedConfig.contractorAccounts);
         setIsMaintenanceMode(cachedConfig.isMaintenanceMode);
         setIsLoading(false);
       }
@@ -109,6 +125,7 @@ export function useAppConfig(): AppConfigState {
         const mc = all.filter(r => r.config_type === 'main_category');
         const sc = all.filter(r => r.config_type === 'sub_category');
         const se = all.filter(r => r.config_type === 'section');
+        const ca = all.filter(r => r.config_type === 'contractor_account');
         const sys = all.filter(r => r.config_type === 'system_setting');
         
       const isManualForce = sys.find(s => s.config_key === 'maintenance_mode')?.config_label === 'true';
@@ -119,12 +136,17 @@ export function useAppConfig(): AppConfigState {
       const isAuto = currentHour >= 17;
       const maint = isManualForce || (isAuto && overrideDateStr !== todayStr);
 
+      const is2FA = sys.find(s => s.config_key === 'global_2fa_enabled')?.config_label !== 'false';
+      const isFileEditPass = sys.find(s => s.config_key === 'file_edit_password_enabled')?.config_label !== 'false';
 
-        cachedConfig = { mainCategories: mc, subCategories: sc, sections: se, isMaintenanceMode: maint };
-        setMainCategories(mc);
-        setSubCategories(sc);
-        setSections(se);
-        setIsMaintenanceMode(maint);
+      cachedConfig = { mainCategories: mc, subCategories: sc, sections: se, contractorAccounts: ca, isMaintenanceMode: maint, isGlobal2FAEnabled: is2FA, isFileEditPasswordEnabled: isFileEditPass };
+      setMainCategories(mc);
+      setSubCategories(sc);
+      setSections(se);
+      setContractorAccounts(ca);
+      setIsMaintenanceMode(maint);
+      setIsGlobal2FAEnabled(is2FA);
+      setIsFileEditPasswordEnabled(isFileEditPass);
         setError(null);
       } catch (err: any) {
         console.error('useAppConfig error:', err);
@@ -133,7 +155,10 @@ export function useAppConfig(): AppConfigState {
         setMainCategories(FALLBACK_MAIN_CATEGORIES);
         setSubCategories(FALLBACK_SUB_CATEGORIES);
         setSections(FALLBACK_SECTIONS);
+        setContractorAccounts([]);
         setIsMaintenanceMode(false);
+        setIsGlobal2FAEnabled(true);
+        setIsFileEditPasswordEnabled(true);
       } finally {
         setIsLoading(false);
         cachePromise = null;
@@ -159,7 +184,7 @@ export function useAppConfig(): AppConfigState {
     fetchConfig(true);
   }, [fetchConfig]);
 
-  return { mainCategories, subCategories, sections, isMaintenanceMode, isLoading, error, refetch };
+  return { mainCategories, subCategories, sections, contractorAccounts, isMaintenanceMode, isGlobal2FAEnabled, isFileEditPasswordEnabled, isLoading, error, refetch };
 }
 
 // Background refresh from Supabase without blocking the UI
@@ -176,6 +201,7 @@ async function refreshFromSupabase() {
     const mc = (data as AppConfigItem[]).filter(r => r.config_type === 'main_category');
     const sc = (data as AppConfigItem[]).filter(r => r.config_type === 'sub_category');
     const se = (data as AppConfigItem[]).filter(r => r.config_type === 'section');
+    const ca = (data as AppConfigItem[]).filter(r => r.config_type === 'contractor_account');
     const sys = (data as AppConfigItem[]).filter(r => r.config_type === 'system_setting');
     
       const isManualForce = sys.find(s => s.config_key === 'maintenance_mode')?.config_label === 'true';
@@ -186,8 +212,10 @@ async function refreshFromSupabase() {
       const isAuto = currentHour >= 17;
       const maint = isManualForce || (isAuto && overrideDateStr !== todayStr);
 
+      const is2FA = sys.find(s => s.config_key === 'global_2fa_enabled')?.config_label !== 'false';
+      const isFileEditPass = sys.find(s => s.config_key === 'file_edit_password_enabled')?.config_label !== 'false';
     
-    cachedConfig = { mainCategories: mc, subCategories: sc, sections: se, isMaintenanceMode: maint };
+    cachedConfig = { mainCategories: mc, subCategories: sc, sections: se, contractorAccounts: ca, isMaintenanceMode: maint, isGlobal2FAEnabled: is2FA, isFileEditPasswordEnabled: isFileEditPass };
   } catch (_) {
     // Silent: offline refresh failed, that's okay
   }

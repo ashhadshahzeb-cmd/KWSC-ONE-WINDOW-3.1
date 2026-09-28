@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -312,7 +312,7 @@ export default function FileTracking() {
   const [deletePassword, setDeletePassword] = useState("");
 
   const handleDeleteRecord = async () => {
-    if (!verifyPassword(deletePassword)) {
+    if (isFileEditPasswordEnabled && !verifyPassword(deletePassword)) {
       toast.error("Incorrect password. Deletion failed.");
       return;
     }
@@ -378,13 +378,15 @@ export default function FileTracking() {
   };
 
   const handleBulkEditDateSubmit = async () => {
-    if (!bulkEditDateForm.password) {
+    if (isFileEditPasswordEnabled && !bulkEditDateForm.password) {
       toast.error("Password required for bulk edit"); return;
     }
     
-    const overrideAllowed = verifyPassword(bulkEditDateForm.password);
-    if (!overrideAllowed) {
-      toast.error("Invalid authorization password"); return;
+    if (isFileEditPasswordEnabled) {
+      const overrideAllowed = verifyPassword(bulkEditDateForm.password);
+      if (!overrideAllowed) {
+        toast.error("Invalid authorization password"); return;
+      }
     }
 
     if (!bulkEditDateForm.created_date && !bulkEditDateForm.print_date) {
@@ -552,6 +554,32 @@ export default function FileTracking() {
       setEditingRecordId(record.id);
       const existingImage = record.file_image || (record.history && record.history.length > 0 && [...record.history].reverse().find((h) => h.file_image)?.file_image) || "";
       setFileImage(existingImage);
+    } else if (!isFileEditPasswordEnabled) {
+      setActiveTab("register");
+      setFormData({
+        ...formData,
+        cfo_diary_number: record.cfo_diary_number,
+        inward_date: record.inward_date || getLocalDateString(),
+        registration_date: record.created_at ? getLocalDateString(record.created_at) : getLocalDateString(),
+        print_date: record.created_at ? getLocalDateString(record.created_at) : getLocalDateString(),
+        received_from: record.received_from || "",
+        receiving_number: record.receiving_number,
+        mainCategory: record.mainCategory || record.main_category || "",
+        subCategory: record.subCategory || record.sub_category || "",
+        subject: record.subject || "",
+        amount: record.amount || 0,
+        gross_amount: record.gross_amount || 0,
+        deduction: record.deduction || 0,
+        remarks: record.remarks || "",
+        mark_to: record.mark_to || "cfo",
+        signature_data: record.signature_data || "",
+        employee_number: record.employee_number || "",
+        voucher_code: record.voucher_code || "",
+      });
+      setIsEditingMode(true);
+      setEditingRecordId(record.id);
+      const existingImage = record.file_image || (record.history && record.history.length > 0 && [...record.history].reverse().find((h) => h.file_image)?.file_image) || "";
+      setFileImage(existingImage);
     } else {
       setApprovalStatus("waiting");
       setIsEditModalOpen(true);
@@ -613,7 +641,7 @@ export default function FileTracking() {
   };
 
   const handleEditRecordAuth = () => {
-    if (!verifyPassword(editPassword)) {
+    if (isFileEditPasswordEnabled && !verifyPassword(editPassword)) {
       toast.error("Incorrect password. Edit access denied.");
       return;
     }
@@ -1038,7 +1066,7 @@ export default function FileTracking() {
   };
 
   // Dynamic config from Supabase (replaces hardcoded categoryOptions & sections)
-  const { mainCategories: dynMainCats, subCategories: dynSubCats, sections: dynSections } = useAppConfig();
+  const { mainCategories: dynMainCats, subCategories: dynSubCats, sections: dynSections, contractorAccounts, isFileEditPasswordEnabled } = useAppConfig();
 
   // Legacy format for backward compatibility
   const categoryOptions: Record<string, string[]> = dynMainCats.reduce((acc, mc) => {
@@ -1292,6 +1320,11 @@ export default function FileTracking() {
 
         // Get old record before modification for activity log diff
         const oldRecord = await db.records.where('id').equals(editingRecordId as string).first();
+
+        // Append EDITED snapshot to history (so WhatsApp bot can detect edits)
+        const editedHistory = [...(oldRecord?.history || []), snapshot];
+        updatePayload.history = editedHistory;
+        localUpdatePayload.history = editedHistory;
 
         // Update locally
         await db.records.where('id').equals(editingRecordId as string).modify({
@@ -4930,6 +4963,38 @@ export default function FileTracking() {
                 </div>
               )}
 
+              {/* Conditional Field: Contractor Account Selection */}
+              {formData.mainCategory === 'contractor' && (
+                <div className="space-y-2 animate-in slide-in-from-left-2 duration-300">
+                  <Label className="text-xs uppercase font-bold text-amber-500 flex items-center gap-2">
+                    <User className="w-3 h-3" /> Select Contractor
+                  </Label>
+                  <Select
+                    value={formData.employee_number} // Reusing employee_number field to store the contractor phone number
+                    onValueChange={(val) => {
+                      const selected = contractorAccounts.find(c => c.config_key === val);
+                      setFormData(prev => ({
+                        ...prev,
+                        employee_number: val,
+                        received_from: selected ? selected.config_label : prev.received_from
+                      }));
+                    }}
+                  >
+                    <SelectTrigger className="bg-amber-500/5 border-amber-500/30 text-white font-bold h-10 text-sm">
+                      <SelectValue placeholder="Select Contractor Account..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-950 border-white/10">
+                      {contractorAccounts.map(account => (
+                        <SelectItem key={account.id} value={account.config_key}>
+                          {account.config_label} <span className="text-white/40 ml-2 font-mono text-xs">({account.config_key})</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-white/40 italic">File updates will be sent to the contractor's WhatsApp number.</p>
+                </div>
+              )}
+
               {/* Conditional Field: Voucher Code */}
               {formData.mainCategory === 'contractor' && formData.subCategory && (
                 <div className="space-y-2 animate-in slide-in-from-left-2 duration-300">
@@ -5276,22 +5341,45 @@ export default function FileTracking() {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                            const img = new Image();
-                            img.src = ev.target?.result as string;
-                            img.onload = () => {
-                              const canvas = document.createElement('canvas');
-                              const MAX = 800;
-                              let w = img.width, h = img.height;
-                              if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
-                              else { if (h > MAX) { w = w * MAX / h; h = MAX; } }
-                              canvas.width = w; canvas.height = h;
-                              canvas.getContext('2d')?.drawImage(img, 0, 0, w, h);
-                              setFileImage(canvas.toDataURL('image/jpeg', 0.65));
-                            };
-                          };
-                          reader.readAsDataURL(file);
+                          try {
+                            // Resize via canvas first
+                            const dataUrl = await new Promise<string>((resolve) => {
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                const img = new Image();
+                                img.src = ev.target?.result as string;
+                                img.onload = () => {
+                                  const canvas = document.createElement('canvas');
+                                  const MAX = 1024;
+                                  let w = img.width, h = img.height;
+                                  if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+                                  else { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+                                  canvas.width = w; canvas.height = h;
+                                  canvas.getContext('2d')?.drawImage(img, 0, 0, w, h);
+                                  resolve(canvas.toDataURL('image/jpeg', 0.75));
+                                };
+                              };
+                              reader.readAsDataURL(file);
+                            });
+                            // Convert base64 to Blob and upload to Supabase Storage
+                            const base64Data = dataUrl.split(',')[1];
+                            const blob = await fetch(dataUrl).then(r => r.blob());
+                            const fileName = `doc_images/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+                            const { data: uploadData, error: uploadError } = await supabase.storage
+                              .from('file-tracking-images')
+                              .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
+                            if (uploadError) {
+                              console.warn('Storage upload failed, falling back to base64:', uploadError.message);
+                              setFileImage(dataUrl); // fallback
+                            } else {
+                              const { data: urlData } = supabase.storage
+                                .from('file-tracking-images')
+                                .getPublicUrl(fileName);
+                              setFileImage(urlData.publicUrl);
+                            }
+                          } catch (err) {
+                            console.warn('Image processing error:', err);
+                          }
                           e.target.value = '';
                         }}
                       />
@@ -6334,29 +6422,32 @@ export default function FileTracking() {
                 <p className="text-sm text-white/70">A request has been sent to the admin. Please wait for them to approve your edit request.</p>
               </div>
             </div>
+            {isFileEditPasswordEnabled && (
+              <>
+                <div className="relative py-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-white/10"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-[#0B101E] px-2 text-xs text-white/40 uppercase font-bold tracking-widest">or bypass</span>
+                  </div>
+                </div>
 
-            <div className="relative py-4">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-[#0B101E] px-2 text-xs text-white/40 uppercase font-bold tracking-widest">or bypass</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-widest text-white/50">Enter Password to Bypass</label>
-              <Input
-                type="password"
-                placeholder="Enter admin password..."
-                value={editPassword}
-                onChange={(e) => setEditPassword(e.target.value)}
-                className="bg-[#1A2333] border-white/10 text-white"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleEditRecordAuth();
-                }}
-              />
-            </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-white/50">Enter Password to Bypass</label>
+                  <Input
+                    type="password"
+                    placeholder="Enter admin password..."
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    className="bg-[#1A2333] border-white/10 text-white"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleEditRecordAuth();
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </div>
           <div className="flex justify-end pt-2">
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)} className="text-white border-white/20">
