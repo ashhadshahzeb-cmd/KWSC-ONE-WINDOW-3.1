@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1358,7 +1358,7 @@ export default function FileTracking() {
           subject: formData.subject,
           details: { 
             before: oldRecord,
-            after: { id: editingRecordId, ...updatePayload }
+            after: { id: editingRecordId, ...updatePayload, file_image: fileImage || undefined }
           }
         });
 
@@ -1431,7 +1431,7 @@ export default function FileTracking() {
           subject: formData.subject,
           details: { 
             before: existingRecord,
-            after: { ...existingRecord, ...updatePayload }
+            after: { ...existingRecord, ...updatePayload, file_image: fileImage || undefined }
           }
         });
 
@@ -1534,7 +1534,7 @@ export default function FileTracking() {
           diaryNumber: formData.cfo_diary_number,
           receivingNumber: formData.receiving_number,
           subject: formData.subject,
-          details: { ...newEntry, form_fill_duration_ms: formFillDurationMs }
+          details: { ...newEntry, file_image: fileImage || undefined, form_fill_duration_ms: formFillDurationMs }
         });
 
         if (linkedPendingId) {

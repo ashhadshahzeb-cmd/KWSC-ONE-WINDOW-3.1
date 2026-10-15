@@ -51,6 +51,7 @@ import {
   fetchHourlyActivityStats
 } from '@/hooks/useActivityLog';
 import { supabase } from '@/integrations/supabase/client';
+import { db } from '@/lib/db';
 import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -254,34 +255,57 @@ export default function ActivityLog() {
       return;
     }
 
-    // 2. Fallback: Query file_tracking_records by receiving_number or diary_number
+    // 2. Fallback: Query local Dexie and Supabase by receiving_number or diary_number
     const rNo = selectedLog.receiving_number || selectedLog.details?.receiving_number;
     const dNo = selectedLog.diary_number || selectedLog.details?.cfo_diary_number;
 
     if (rNo || dNo) {
       setIsLoadingImage(true);
-      let query = supabase.from('file_tracking_records').select('file_image, history');
-      if (rNo) {
-        query = query.eq('receiving_number', rNo);
-      } else if (dNo) {
-        query = query.eq('cfo_diary_number', dNo);
-      }
-      query
-        .limit(1)
-        .maybeSingle()
-        .then(({ data }) => {
-          setIsLoadingImage(false);
-          if (data) {
-            const img =
-              data.file_image ||
-              (Array.isArray(data.history) &&
-                [...data.history].reverse().find((h: any) => h?.file_image)?.file_image);
-            if (img) setSelectedLogImage(img);
+
+      const tryFetch = async () => {
+        try {
+          // Check local Dexie first (instant)
+          if (rNo) {
+            const localRec = await db.records.where('receiving_number').equals(rNo).first();
+            if (localRec?.file_image) {
+              setSelectedLogImage(localRec.file_image);
+              setIsLoadingImage(false);
+              return;
+            }
           }
-        })
-        .catch(() => {
+          if (dNo) {
+            const localRec = await db.records.where('cfo_diary_number').equals(dNo).first();
+            if (localRec?.file_image) {
+              setSelectedLogImage(localRec.file_image);
+              setIsLoadingImage(false);
+              return;
+            }
+          }
+
+          // Query Supabase (using 'history' column which actually exists)
+          let query = supabase.from('file_tracking_records').select('history');
+          if (rNo) {
+            query = query.eq('receiving_number', rNo);
+          } else if (dNo) {
+            query = query.eq('cfo_diary_number', dNo);
+          }
+          const { data } = await query.limit(1).maybeSingle();
+          if (data && Array.isArray(data.history)) {
+            const img = [...data.history].reverse().find((h: any) => h?.file_image)?.file_image;
+            if (img) {
+              setSelectedLogImage(img);
+              setIsLoadingImage(false);
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('Error fetching document image for activity log:', e);
+        } finally {
           setIsLoadingImage(false);
-        });
+        }
+      };
+
+      tryFetch();
     } else {
       setSelectedLogImage(null);
     }
@@ -1009,56 +1033,64 @@ export default function ActivityLog() {
             </div>
 
             {/* Attached Document Photo Section */}
-            {(selectedLogImage || isLoadingImage) && (
-              <div className="bg-white/[0.02] p-4 rounded-xl border border-white/[0.05] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-teal-400" />
-                    <Label className="text-[10px] text-teal-300 uppercase tracking-widest font-bold">Attached Document / File Picture</Label>
-                  </div>
-                  {selectedLogImage && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs bg-white/5 hover:bg-white/10 text-white rounded-lg gap-1.5"
-                        onClick={() => window.open(selectedLogImage, '_blank')}
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> Open Full Image
-                      </Button>
-                      <a
-                        href={selectedLogImage}
-                        download={`document-${selectedLog?.receiving_number || selectedLog?.diary_number || 'file'}.jpg`}
-                        className="inline-flex items-center justify-center h-7 px-2.5 text-xs bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-lg gap-1.5 font-medium transition-colors"
-                      >
-                        <Download className="w-3.5 h-3.5" /> Download
-                      </a>
-                    </div>
-                  )}
+            <div className="bg-white/[0.02] p-4 rounded-xl border border-white/[0.05] space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-teal-400" />
+                  <Label className="text-[10px] text-teal-300 uppercase tracking-widest font-bold">Attached Document / File Picture</Label>
                 </div>
-
-                {isLoadingImage ? (
-                  <div className="flex items-center justify-center py-8 text-white/40 text-xs gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-teal-400" /> Loading attached document image...
-                  </div>
-                ) : selectedLogImage ? (
-                  <div className="relative group rounded-xl overflow-hidden border border-white/10 bg-black/40 flex items-center justify-center max-h-80">
-                    <img
-                      src={selectedLogImage}
-                      alt="Attached Document"
-                      className="max-h-80 w-auto object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.01]"
+                {selectedLogImage && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs bg-white/5 hover:bg-white/10 text-white rounded-lg gap-1.5"
                       onClick={() => window.open(selectedLogImage, '_blank')}
-                      title="Click to open full view in new tab"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                      <span className="text-xs font-bold text-white bg-black/80 px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 shadow-lg">
-                        <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> Click to view full image in new tab
-                      </span>
-                    </div>
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> Open Full Image
+                    </Button>
+                    <a
+                      href={selectedLogImage}
+                      download={`document-${selectedLog?.receiving_number || selectedLog?.diary_number || 'file'}.jpg`}
+                      className="inline-flex items-center justify-center h-7 px-2.5 text-xs bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-lg gap-1.5 font-medium transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Download
+                    </a>
                   </div>
-                ) : null}
+                )}
               </div>
-            )}
+
+              {isLoadingImage ? (
+                <div className="flex items-center justify-center py-6 text-white/40 text-xs gap-2 bg-black/20 rounded-lg border border-white/5">
+                  <Loader2 className="w-4 h-4 animate-spin text-teal-400" /> Loading attached document image...
+                </div>
+              ) : selectedLogImage ? (
+                <div className="relative group rounded-xl overflow-hidden border border-white/10 bg-black/40 flex items-center justify-center max-h-80">
+                  <img
+                    src={selectedLogImage}
+                    alt="Attached Document"
+                    className="max-h-80 w-auto object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.01]"
+                    onClick={() => window.open(selectedLogImage, '_blank')}
+                    title="Click to open full view in new tab"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                    <span className="text-xs font-bold text-white bg-black/80 px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 shadow-lg">
+                      <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> Click to view full image in new tab
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-3 bg-white/[0.01] rounded-lg border border-dashed border-white/10 text-white/40 text-xs">
+                  <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+                    <ImageIcon className="w-4 h-4 text-white/30" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white/60 block text-[11px]">No Document Photo Attached</span>
+                    <span className="text-[10px] text-white/30">No picture was uploaded during registration or forwarding for this file.</span>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Diff Viewer */}
             <div>
