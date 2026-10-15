@@ -110,3 +110,5 @@ app.listen(PORT, '127.0.0.1', () => {
   console.log(` GET  http://127.0.0.1:${PORT}/odata/v4/file-tracking/FileTimelines`);
   console.log('============================================\n');
 });
+
+module.exports = app;

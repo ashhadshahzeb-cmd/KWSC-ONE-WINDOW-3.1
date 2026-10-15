@@ -2,6 +2,7 @@
   "name": "sap-file-tracking",
   "version": "1.0.0",
   "description": "SAP CAP Backend for File Tracking",
+  "main": "server.js",
   "dependencies": {
     "@cap-js/sqlite": "^3.0.2",
     "@sap/cds": "^10.0.4",

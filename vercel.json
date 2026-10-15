@@ -1,5 +1,43 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "vite"
+    },
+    "kwsc-landing-page": {
+      "root": "kwsc-landing-page",
+      "framework": "nextjs"
+    },
+    "sap-file-tracking": {
+      "root": "sap-file-tracking",
+      "framework": "express"
+    }
+  },
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/api/sap/(.*)",
+      "destination": {
+        "service": "sap-file-tracking"
+      }
+    },
+    {
+      "source": "/landing",
+      "destination": {
+        "service": "kwsc-landing-page"
+      }
+    },
+    {
+      "source": "/landing/(.*)",
+      "destination": {
+        "service": "kwsc-landing-page"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
   ]
 }
