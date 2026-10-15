@@ -276,6 +276,180 @@ client.on('disconnected', (reason) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 0.5 Incoming Call Handler — "Call for Update" Feature
+// Jab koi bot number pe call karega → auto-reject + latest file updates bhejega
+// ─────────────────────────────────────────────────────────────────────────────
+const callCooldownMap = new Map(); // Prevent spam: 1 call-update per 2 minutes per number
+
+client.on('call', async (call) => {
+    try {
+        const callerJid = call.from; // e.g. "923372106557@c.us"
+        const callerNumber = callerJid.replace('@c.us', '');
+        const isVideoCall = call.isVideo || false;
+
+        console.log(`📞 Incoming ${isVideoCall ? 'Video' : 'Voice'} Call from: ${callerNumber}`);
+
+        // 1. Auto-reject the call (bot can't answer voice/video calls)
+        try {
+            await call.reject();
+            console.log(`📞 Call auto-rejected for ${callerNumber}`);
+        } catch (rejectErr) {
+            console.warn('⚠️ Could not auto-reject call:', rejectErr.message);
+        }
+
+        // 2. Cooldown check — prevent spam (2 minutes between call-updates per number)
+        const now = Date.now();
+        const lastCallTime = callCooldownMap.get(callerNumber);
+        if (lastCallTime && (now - lastCallTime) < 120000) {
+            console.log(`⏩ Cooldown active for ${callerNumber}, skipping call-update.`);
+            return;
+        }
+        callCooldownMap.set(callerNumber, now);
+
+        // Cleanup old cooldown entries
+        if (callCooldownMap.size > 100) {
+            for (const [k, v] of callCooldownMap.entries()) {
+                if (now - v > 300000) callCooldownMap.delete(k);
+            }
+        }
+
+        // 3. Check if caller is a registered/known number
+        const isKnownCaller = activeTargetNumbers.some(tn => {
+            const cleanTn = tn.replace('@c.us', '');
+            return cleanTn === callerNumber;
+        });
+
+        if (!isKnownCaller) {
+            // Unknown caller — send polite rejection message
+            try {
+                await client.sendMessage(callerJid,
+                    `📞 *KWSC File Tracking Bot*\n` +
+                    `━━━━━━━━━━━━━━━━━━━━\n` +
+                    `Yeh number sirf authorized officials ke liye hai.\n` +
+                    `Bot voice/video calls support nahi karta.\n\n` +
+                    `_Agar aap registered hain to WhatsApp message bhejein:_\n` +
+                    `Type *HELP* for available commands.`
+                );
+            } catch (_) {}
+            console.log(`📞 Unknown caller ${callerNumber} — polite rejection sent.`);
+            return;
+        }
+
+        // 4. Known caller — Build comprehensive file update message
+        console.log(`📞 Known caller ${callerNumber} — preparing live file update...`);
+
+        // Fetch today's metrics
+        const todayPkt = getPktDateString();
+        const todayStartIso = `${todayPkt}T00:00:00+05:00`;
+        const todayEndIso = `${todayPkt}T23:59:59+05:00`;
+
+        // Today's Inward Count
+        const { count: todayInward } = await supabase
+            .from('file_tracking_records')
+            .select('id', { count: 'exact', head: true })
+            .or(`inward_date.eq.${todayPkt},and(created_at.gte.${todayStartIso},created_at.lte.${todayEndIso})`);
+
+        // Today's Forwarded Count (from activity_log)
+        const { count: todayForwarded } = await supabase
+            .from('activity_log')
+            .select('id', { count: 'exact', head: true })
+            .eq('action', 'FORWARD')
+            .gte('created_at', todayStartIso)
+            .lte('created_at', todayEndIso);
+
+        // Today's Disposed/Outwarded Count
+        const { count: todayDisposed } = await supabase
+            .from('file_tracking_records')
+            .select('id', { count: 'exact', head: true })
+            .eq('outward_date', todayPkt);
+
+        // Total Active Pending Files
+        const { data: activeFiles, count: totalPending } = await supabase
+            .from('file_tracking_records')
+            .select('id, mark_to, inward_date, created_at', { count: 'exact' })
+            .is('outward_date', null);
+
+        // Delayed files count (> threshold days)
+        const today = new Date();
+        let delayedCount = 0;
+        const sectionCounts = {};
+        (activeFiles || []).forEach(f => {
+            const fileDate = new Date(f.inward_date || f.created_at);
+            const diffDays = Math.floor((today - fileDate) / (1000 * 60 * 60 * 24));
+            if (diffDays >= activeDelayedThresholdDays) delayedCount++;
+            const sec = f.mark_to || 'Unassigned';
+            sectionCounts[sec] = (sectionCounts[sec] || 0) + 1;
+        });
+
+        // Recent 5 file movements (latest activity)
+        const { data: recentActivity } = await supabase
+            .from('file_tracking_records')
+            .select('cfo_diary_number, receiving_number, subject, mark_to, main_category, amount, created_at, inward_date')
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        // Top 5 sections with most pending files
+        const topSections = Object.entries(sectionCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([sec, count]) => `  • *${sec}:* ${count} file(s)`)
+            .join('\n');
+
+        // Build the response message
+        let callUpdateMsg =
+            `📞 *Call Received — Live File Update*\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `_Aapki call detect hui. Yeh raha aapka latest update:_\n\n` +
+            `📅 *Date:* ${getPktDateFormatted()} (${getPktDateTimeFormatted()})\n\n` +
+            `📊 *Aaj Ka Summary:*\n` +
+            `  📥 Inwarded: *${todayInward || 0}*\n` +
+            `  📤 Forwarded: *${todayForwarded || 0}*\n` +
+            `  ✅ Disposed: *${todayDisposed || 0}*\n\n` +
+            `⏳ *Total Active Pending:* ${totalPending || 0}\n` +
+            `⚠️ *Delayed Files (>${activeDelayedThresholdDays} days):* ${delayedCount}\n\n`;
+
+        // Add top sections
+        if (topSections) {
+            callUpdateMsg +=
+                `🏢 *Section-wise Pending:*\n` +
+                topSections + `\n\n`;
+        }
+
+        // Add recent 5 files
+        if (recentActivity && recentActivity.length > 0) {
+            callUpdateMsg += `📁 *Latest 5 File Movements:*\n`;
+            recentActivity.forEach((f, idx) => {
+                const diary = f.cfo_diary_number || f.receiving_number || 'N/A';
+                const subject = f.subject ? (f.subject.length > 40 ? f.subject.substring(0, 37) + '...' : f.subject) : 'No subject';
+                const section = f.mark_to || 'Unassigned';
+                const amountStr = f.amount && Number(f.amount) > 0 ? ` | Rs.${Number(f.amount).toLocaleString('en-PK')}` : '';
+                callUpdateMsg += `${idx + 1}. *${diary}* → ${section}\n   📝 ${subject}${amountStr}\n`;
+            });
+            callUpdateMsg += `\n`;
+        }
+
+        callUpdateMsg +=
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `💡 _Mazeed details ke liye commands use karein:_\n` +
+            `• *STATUS <Diary No>* — File ki detail\n` +
+            `• *PENDING* — Delayed files list\n` +
+            `• *SUMMARY* — Full day report\n` +
+            `━━━━━━━━━━━━━━━━━━━━\n` +
+            `_🏛️ KWSC One Window File Tracking System_`;
+
+        // 5. Send the update message
+        await client.sendMessage(callerJid, callUpdateMsg);
+        console.log(`✅ Call-triggered file update sent to ${callerNumber}`);
+
+        // 6. Log the call event
+        await logWhatsAppEvent('INCOMING', callerNumber, `Call from ${callerNumber}`, 'Voice Call → Auto File Update Sent', 'WHATSAPP_QUERY');
+
+    } catch (err) {
+        console.error('❌ Error handling incoming call:', err);
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 1. Interactive Two-Way Query Chatbot
 // ─────────────────────────────────────────────────────────────────────────────
 client.on('message', async (msg) => {
@@ -980,9 +1154,9 @@ function subscribeToDatabase() {
             const historyArr = Array.isArray(f.history) ? f.history : [];
             const fileImageUrl = f.file_image || (historyArr.length > 0 && historyArr[historyArr.length - 1]?.file_image) || null;
             if (fileImageUrl && (fileImageUrl.startsWith('http') || fileImageUrl.startsWith('data:image'))) {
-                await broadcastWithMedia(msg, fileImageUrl);
+                await broadcastWithMedia(msg, fileImageUrl, f);
             } else {
-                await broadcastToAllTargets(msg);
+                await broadcastToAllTargets(msg, f);
             }
 
             // Direct Contractor Notification
@@ -1043,9 +1217,9 @@ function subscribeToDatabase() {
                 // Check for file image in history or root
                 const fileImageUrl = latestEdit?.file_image || f.file_image || null;
                 if (fileImageUrl && (fileImageUrl.startsWith('http') || fileImageUrl.startsWith('data:image'))) {
-                    await broadcastWithMedia(msg, fileImageUrl);
+                    await broadcastWithMedia(msg, fileImageUrl, f);
                 } else {
-                    await broadcastToAllTargets(msg);
+                    await broadcastToAllTargets(msg, f);
                 }
 
                 if (f.main_category === 'contractor' && f.employee_number) {
@@ -1064,7 +1238,7 @@ function subscribeToDatabase() {
                     `📍 *Current Section:* ${f.mark_to || 'N/A'}\n` +
                     `⚙️ *Status:* ${f.status || (f.outward_date ? 'Outwarded' : 'In Process')}\n` +
                     `🕐 *Time:* ${getPktDateTimeFormatted()}`;
-                await broadcastToAllTargets(msg);
+                await broadcastToAllTargets(msg, f);
 
                 if (f.main_category === 'contractor' && f.employee_number) {
                     const contractorMsg = `👷‍♂️ *Contractor Alert - KWSC*\n━━━━━━━━━━━━━━━━━━━━\nHello ${f.received_from || 'Contractor'},\nYour file status has been updated.\n\n${msg}`;
@@ -1159,7 +1333,7 @@ async function sendDirectMessage(targetNumber, message, imageUrl = null) {
         console.error(`❌ Failed to send direct message to ${cleanNumber}:`, error.message);
     }
 }
-async function broadcastWithMedia(message, imageUrl) {
+async function broadcastWithMedia(message, imageUrl, recordInfo = null) {
     if (activeTargetNumbers.length === 0) {
         console.log("⚠️ No active target phone numbers configured. Skipping media broadcast.");
         return;
@@ -1179,6 +1353,13 @@ async function broadcastWithMedia(message, imageUrl) {
         return;
     }
     for (const number of activeTargetNumbers) {
+        if (number.includes('923456777712') && recordInfo) {
+            const cat = (recordInfo.main_category || '').toLowerCase().trim();
+            const sec = (recordInfo.mark_to || '').toLowerCase().trim();
+            if (cat !== 'contractor' || sec !== 'budget') {
+                continue; // Skip for this restricted number
+            }
+        }
         try {
             await client.sendMessage(number, message);
             if (media) {
@@ -1194,12 +1375,19 @@ async function broadcastWithMedia(message, imageUrl) {
     }
 }
 
-async function broadcastToAllTargets(message) {
+async function broadcastToAllTargets(message, recordInfo = null) {
     if (activeTargetNumbers.length === 0) {
         console.log("⚠️ No active target phone numbers configured. Skipping broadcast.");
         return;
     }
     for (const number of activeTargetNumbers) {
+        if (number.includes('923456777712') && recordInfo) {
+            const cat = (recordInfo.main_category || '').toLowerCase().trim();
+            const sec = (recordInfo.mark_to || '').toLowerCase().trim();
+            if (cat !== 'contractor' || sec !== 'budget') {
+                continue; // Skip for this restricted number
+            }
+        }
         try {
             await client.sendMessage(number, message);
             console.log(`✅ Message broadcasted to ${number}`);

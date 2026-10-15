@@ -36,3 +36,9 @@ pgsql17_bin/
 scratch/
 .agents/
 skills-lock.json
+.wwebjs_auth/
+.wwebjs_cache/
+whatsapp-service/.wwebjs_auth/
+whatsapp-service/.wwebjs_cache/
+*.cjs
+!scripts/*.cjs

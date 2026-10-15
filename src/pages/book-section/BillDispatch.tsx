@@ -367,7 +367,7 @@ export default function BillDispatch() {
                 <Label className="text-[10px] font-bold uppercase">Diary Number</Label>
                 {formData.diaryNo && (
                   <div
-                    className="bg-white p-1 rounded border border-primary/20 shadow-sm mb-1 cursor-zoom-in hover:shadow-md transition-shadow"
+                    className="bg-white p-1 rounded border border-primary/20 shadow-sm mb-1 cursor-zoom-in hover:shadow-md transition-shadow relative inline-flex items-center justify-center"
                     onClick={() => handleQRClick(formData.diaryNo, "PENDING")}
                   >
                     <img
@@ -375,6 +375,13 @@ export default function BillDispatch() {
                       alt="QR"
                       className="w-8 h-8"
                     />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <img
+                        src="/kwsc-watermark-logo.png"
+                        alt="KWSC Watermark"
+                        className="w-2.5 h-2.5 object-contain bg-white rounded-full"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -689,11 +696,21 @@ export default function BillDispatch() {
 
             <div className="mt-8 relative group p-4 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-primary/10">
               <div className="absolute -inset-1 bg-gradient-to-r from-primary to-blue-500 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`${window.location.origin}/public-track/${selectedQR.diary}/${selectedQR.tracking}`)}`}
-                alt="Enlarged QR"
-                className="w-[280px] h-[280px] relative rounded-xl"
-              />
+              <div className="relative inline-flex items-center justify-center">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(`${window.location.origin}/public-track/${selectedQR.diary}/${selectedQR.tracking}`)}`}
+                  alt="Enlarged QR"
+                  className="w-[280px] h-[280px] relative rounded-xl"
+                />
+                {/* Central KWSC Watermark Logo */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <img
+                    src="/kwsc-watermark-logo.png"
+                    alt="KWSC Watermark"
+                    className="w-16 h-16 object-contain bg-white rounded-full p-1 shadow-lg border-2 border-blue-900/40"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="mt-10 grid grid-cols-1 w-full gap-4">

@@ -430,13 +430,23 @@ export default function FileRecordDetail() {
               Scan to Track
             </p>
             <div className="bg-white p-3 rounded-2xl shadow-lg shadow-[#14b8a6]/10">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-                  `${window.location.origin}/public-track/${record.cfo_diary_number}/${record.receiving_number}`
-                )}&color=0f1115`}
-                alt="QR"
-                className="w-28 h-28 rounded-lg"
-              />
+              <div className="relative inline-flex items-center justify-center">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
+                    `${window.location.origin}/public-track/${record.cfo_diary_number}/${record.receiving_number}`
+                  )}&color=0f1115`}
+                  alt="QR"
+                  className="w-28 h-28 rounded-lg"
+                />
+                {/* Central KWSC Watermark Logo */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <img
+                    src="/kwsc-watermark-logo.png"
+                    alt="KWSC Watermark"
+                    className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-md border-2 border-blue-900/40"
+                  />
+                </div>
+              </div>
             </div>
             <div className="text-center">
               <p className="text-xs font-black text-white/60 print:text-black">

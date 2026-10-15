@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -182,6 +182,10 @@ export default function FileTracking() {
   const DB_PAGE_SIZE = 50;
   const [currentPage, setCurrentPage] = useState(0);
   const [totalRecords, setTotalRecords] = useState(0);
+
+  const [contractorYearFilter, setContractorYearFilter] = useState('all');
+  const [contractorMarkToFilter, setContractorMarkToFilter] = useState('all');
+
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -225,6 +229,8 @@ export default function FileTracking() {
   const [isPreEntryModalOpen, setIsPreEntryModalOpen] = useState(false);
   const [preEntryForm, setPreEntryForm] = useState({ handover_person_name: "", file_purpose: "" });
   const [isSavingForm, setIsSavingForm] = useState(false);
+  // Tracks when the registration form was opened/reset
+  const formStartTimeRef = useRef<number>(Date.now());
   const [fileImage, setFileImage] = useState<string>("");
   const [pendingTrackingCode, setPendingTrackingCode] = useState("");
   const [linkedPendingId, setLinkedPendingId] = useState<string | null>(null);
@@ -1115,6 +1121,8 @@ export default function FileTracking() {
     setShowMobileUploadQR(false);
     setMobileUploadSessionId("");
     fetchNextDiaryNumber();
+    // Reset the form start timer for fresh registration
+    formStartTimeRef.current = Date.now();
   };
 
   const handleEmployeeNumberChange = async (val: string) => {
@@ -1516,6 +1524,8 @@ export default function FileTracking() {
           record_id: formData.receiving_number,
         });
 
+        // Calculate how long the user took to fill the registration form
+        const formFillDurationMs = Date.now() - formStartTimeRef.current;
         logActivity({
           userRole: currentRole || 'unknown',
           userName: userName || sections.find(s => s.id === currentRole)?.name || currentRole || 'Unknown',
@@ -1524,7 +1534,7 @@ export default function FileTracking() {
           diaryNumber: formData.cfo_diary_number,
           receivingNumber: formData.receiving_number,
           subject: formData.subject,
-          details: { ...newEntry }
+          details: { ...newEntry, form_fill_duration_ms: formFillDurationMs }
         });
 
         if (linkedPendingId) {
@@ -1653,7 +1663,7 @@ export default function FileTracking() {
 
   useEffect(() => {
     setCurrentPage(0);
-  }, [filterCategory, filterSubCategory, filterSection, filterAmount, filterStatus, sortOrder, debouncedSearchQuery, activeTab, viewingRole, reportDateFilter, customFilterStartDate, customFilterEndDate]);
+  }, [filterCategory, filterSubCategory, filterSection, filterAmount, filterStatus, sortOrder, debouncedSearchQuery, activeTab, viewingRole, reportDateFilter, customFilterStartDate, customFilterEndDate, contractorYearFilter, contractorMarkToFilter]);
 
   const handleRestoreRecord = async (file: any) => {
     try {
@@ -1713,7 +1723,7 @@ export default function FileTracking() {
       });
 
       // GLOBAL RESTRICTION: Hide 2026 CFO Diary Numbers from non-superadmins
-      if (currentRole !== 'super_admin') {
+      if (currentRole !== 'super_admin' && activeTab !== 'contractor_bills') {
         mapped = mapped.filter(r => !(r.cfo_diary_number && r.cfo_diary_number.includes('-2026-')));
       }
 
@@ -1762,6 +1772,21 @@ export default function FileTracking() {
           mapped = mapped.filter(r => r.history && r.history.some((h: any) => h.action === 'BULK_DATE_EDITED'));
         } else if (activeTab === 'backdate_2026') {
           mapped = mapped.filter(r => r.cfo_diary_number && r.cfo_diary_number.includes('-2026-'));
+        } else if (activeTab === 'contractor_bills') {
+          // Keep only contractor + contractor bills records
+          mapped = mapped.filter(r =>
+            (r.main_category || r.mainCategory || '').toLowerCase().includes('contractor') &&
+            (r.sub_category || r.subCategory || '').toLowerCase().includes('contractor') &&
+            (r.sub_category || r.subCategory || '').toLowerCase().includes('bill')
+          );
+          // Year filter
+          if (contractorYearFilter !== 'all') {
+            mapped = mapped.filter(r => (r.cfo_diary_number || '').includes(contractorYearFilter));
+          }
+          // Mark-to filter
+          if (contractorMarkToFilter !== 'all') {
+            mapped = mapped.filter(r => (r.mark_to || '').toLowerCase() === contractorMarkToFilter.toLowerCase());
+          }
         }
       }
 
@@ -1881,6 +1906,17 @@ export default function FileTracking() {
         query = query.contains('history', '[{"action": "BULK_DATE_EDITED"}]');
       } else if (activeTab === 'backdate_2026') {
         query = query.like('cfo_diary_number', '%-2026-%');
+      } else if (activeTab === 'contractor_bills') {
+        // Filter by contractor category and contractor bills sub-category
+        query = query.ilike('main_category', '%contractor%').ilike('sub_category', '%contractor%bill%');
+        // Year filter
+        if (contractorYearFilter !== 'all') {
+          query = query.ilike('cfo_diary_number', `%${contractorYearFilter}%`);
+        }
+        // Mark-to filter (cia / budget)
+        if (contractorMarkToFilter !== 'all') {
+          query = query.eq('mark_to', contractorMarkToFilter);
+        }
       }
 
       // Apply Category filter
@@ -2399,15 +2435,13 @@ export default function FileTracking() {
     }
   }, [isFileViewer, activeTab]);
 
-
-
   useEffect(() => {
     if (activeTab === 'bulk_modified') {
       fetchBulkModifiedRecords();
     } else {
       fetchRecords(currentPage);
     }
-  }, [currentPage, filterCategory, filterSubCategory, filterSection, filterAmount, filterStatus, sortOrder, debouncedSearchQuery, activeTab, viewingRole, reportDateFilter, customFilterStartDate, customFilterEndDate]);
+  }, [currentPage, filterCategory, filterSubCategory, filterSection, filterAmount, filterStatus, sortOrder, debouncedSearchQuery, activeTab, viewingRole, reportDateFilter, customFilterStartDate, customFilterEndDate, contractorYearFilter, contractorMarkToFilter]);
 
   // Auto-select records when category changes to a specific category
   useEffect(() => {
@@ -3022,7 +3056,8 @@ export default function FileTracking() {
                     <History className="w-4 h-4" /> Backdate (2026)
                   </TabsTrigger>
                 )}
-                {isAdmin && (
+                <TabsTrigger value="contractor_bills" className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"><Building2 className="w-4 h-4" /> Contractor Bills</TabsTrigger>
+                  {isAdmin && (
                   <TabsTrigger
                     value="trash_box"
                     className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#ef4444] data-[state=active]:text-white text-white/50 hover:text-red-400 transition-all font-black text-sm"
@@ -3549,7 +3584,7 @@ export default function FileTracking() {
             {/* List Panel */}
             <div className="lg:col-span-2">
               <Card className="glass-card border-none shadow-xl">
-                <CardHeader>
+                <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-6 gap-4">
                   <CardTitle className="text-xl font-bold flex items-center gap-2">
                     <RefreshCw className="w-6 h-6 text-primary animate-spin-slow" />
                     Returned / Additional Mark Tray
@@ -3643,7 +3678,7 @@ export default function FileTracking() {
             <div className="lg:col-span-1">
               {selectedBill ? (
                 <Card className="glass-card border-none shadow-xl relative">
-                  <CardHeader>
+                  <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-6 gap-4">
                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                       <History className="w-5 h-5 text-primary" />
                       Movement History
@@ -4081,7 +4116,7 @@ export default function FileTracking() {
 
         <TabsContent value="timeline" className="animate-fade-up">
           <Card className="glass-card border-none shadow-xl">
-            <CardHeader>
+            <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-6 gap-4">
               <CardTitle className="text-xl font-bold flex items-center gap-2">
                 <History className="w-6 h-6 text-primary" />
                 Department Activity Timeline
@@ -4261,7 +4296,7 @@ export default function FileTracking() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Search Panel */}
             <Card className="glass-card border-none shadow-xl">
-              <CardHeader>
+              <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-6 gap-4">
                 <CardTitle className="text-sm font-bold uppercase tracking-widest text-primary">Track Your File</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -4302,7 +4337,7 @@ export default function FileTracking() {
                           </div>
                         </div>
                         <div
-                          className="bg-white p-1 rounded-lg border border-primary/20 shadow-sm cursor-zoom-in hover:scale-110 transition-transform"
+                          className="bg-white p-1 rounded-lg border border-primary/20 shadow-sm cursor-zoom-in hover:scale-110 transition-transform relative inline-flex items-center justify-center"
                           onClick={() => handleQRClick(selectedBill.cfo_diary_number || selectedBill.diary_no, selectedBill.receiving_number || selectedBill.tracking_id, getLocalDateString(selectedBill.created_at), getLocalDateString(selectedBill.created_at))}
                         >
                           <img
@@ -4310,6 +4345,13 @@ export default function FileTracking() {
                             alt="QR"
                             className="w-12 h-12"
                           />
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <img
+                              src="/kwsc-watermark-logo.png"
+                              alt="KWSC Watermark"
+                              className="w-3.5 h-3.5 object-contain bg-white rounded-full p-0.5 shadow-sm"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -4549,7 +4591,7 @@ export default function FileTracking() {
 
                   {/* Tracking Journey */}
                   <Card className="glass-card border-none shadow-xl relative">
-                    <CardHeader>
+                    <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-6 gap-4">
                       <CardTitle className="text-lg font-bold flex items-center gap-2">
                         <History className="w-5 h-5 text-primary" />
                         Movement History (Timeline)
@@ -5719,7 +5761,96 @@ export default function FileTracking() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="cfo_all_files" className="mt-6 space-y-6">
+        <TabsContent value="contractor_bills" className="mt-6 space-y-6">
+            <Card className="glass-card border-none shadow-2xl">
+              <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-6 gap-4">
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  Contractor Bills
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-primary/20 text-primary text-sm font-mono">
+                    {totalRecords} entries
+                  </span>
+                </CardTitle>
+                <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
+                  <Select value={contractorYearFilter} onValueChange={setContractorYearFilter}>
+                    <SelectTrigger className="w-[150px] bg-[#0f1115] border-white/10 text-white font-bold h-10">
+                      <SelectValue placeholder="Select Year" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0f1115] border-white/10 text-white">
+                      <SelectItem value="all">All Years</SelectItem>
+                      <SelectItem value="2026">2026</SelectItem>
+                      <SelectItem value="2627">2627</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={contractorMarkToFilter} onValueChange={setContractorMarkToFilter}>
+                    <SelectTrigger className="w-[150px] bg-[#0f1115] border-white/10 text-white font-bold h-10">
+                      <SelectValue placeholder="Mark To" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0f1115] border-white/10 text-white">
+                      <SelectItem value="all">All Sections</SelectItem>
+                      <SelectItem value="budget">Budget</SelectItem>
+                      <SelectItem value="cia">CIA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="w-full overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-border/30 hover:bg-transparent">
+                        <TableHead>Diary / Receiving</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Date / Time</TableHead>
+                        <TableHead>Status / Location</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {records.map((file, i) => (
+                        <TableRow key={i} className="hover:bg-primary/5 transition-colors group">
+                          <TableCell className="font-mono text-xs font-bold text-primary">{file.cfo_diary_number}</TableCell>
+                          <TableCell>
+                            <div className="font-bold text-sm text-foreground">{file.subject}</div>
+                            <div className="text-[10px] text-muted-foreground uppercase">{file.mainCategory} / {file.subCategory}</div>
+                          </TableCell>
+                          <TableCell className="font-mono font-bold">{formatCurrency(file.amount)}</TableCell>
+                          <TableCell>
+                            <div className="text-xs font-medium">{new Date(file.created_at).toLocaleDateString()}</div>
+                            <div className="text-[10px] text-muted-foreground">{new Date(file.created_at).toLocaleTimeString()}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[10px] uppercase">{file.mark_to}</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+                {/* Pagination for contractor bills */}
+                <div className="flex items-center justify-between px-4 py-3 border-t border-white/10">
+                  <span className="text-sm text-white/50">
+                    Showing {records.length} of {totalRecords} entries
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(p - 1, 0))}
+                      disabled={currentPage === 0}
+                      className="px-3 py-1 rounded bg-white/5 border border-white/10 text-white text-sm disabled:opacity-30 hover:bg-white/10 transition"
+                    >← Prev</button>
+                    <span className="text-sm text-white/50">Page {currentPage + 1}</span>
+                    <button
+                      onClick={() => setCurrentPage(p => p + 1)}
+                      disabled={(currentPage + 1) * 50 >= totalRecords}
+                      className="px-3 py-1 rounded bg-white/5 border border-white/10 text-white text-sm disabled:opacity-30 hover:bg-white/10 transition"
+                    >Next →</button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="cfo_all_files" className="mt-6 space-y-6">
           <Card className="glass-card border-none shadow-2xl">
             <CardHeader className="flex flex-col md:flex-row md:items-center justify-between pb-6 gap-4">
               <div>
@@ -6052,6 +6183,10 @@ export default function FileTracking() {
       {/* Hidden Printable Covering Page */}
       <div className={`print-only hidden ${isPrintingCovering ? '' : 'no-print'}`}>
         <div ref={printRef} className="p-6 font-sans text-black bg-white min-h-[210mm] w-[148mm] mx-auto relative overflow-hidden">
+          {/* Full-Page Official KWSC Watermark */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[35] overflow-hidden">
+            <img src="/kwsc-watermark-logo.png" alt="KWSC Watermark" className="w-[420px] h-[420px] object-contain opacity-[0.10] select-none filter contrast-125 print:opacity-[0.14]" />
+          </div>
           
           {/* DUPLICATE Watermark */}
           {isDuplicatePrint && (
@@ -6077,11 +6212,21 @@ export default function FileTracking() {
             </div>
             {selectedBill && (
               <div className="flex flex-col items-center gap-1">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${window.location.origin}/public-track/${selectedBill.cfo_diary_number || selectedBill.diary_no}/${selectedBill.receiving_number || selectedBill.tracking_id}?sec=${selectedBill.mark_to || selectedBill.current_status || 'CFO'}`)}`}
-                  alt="QR Code"
-                  className="w-24 h-24 border border-black p-1"
-                />
+                <div className="relative inline-flex items-center justify-center border border-black p-1 bg-white">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${window.location.origin}/public-track/${selectedBill.cfo_diary_number || selectedBill.diary_no}/${selectedBill.receiving_number || selectedBill.tracking_id}?sec=${selectedBill.mark_to || selectedBill.current_status || 'CFO'}`)}`}
+                    alt="QR Code"
+                    className="w-24 h-24"
+                  />
+                  {/* Central KWSC Watermark Logo */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <img
+                      src="/kwsc-watermark-logo.png"
+                      alt="KWSC Watermark"
+                      className="w-7 h-7 object-contain bg-white rounded-full p-0.5 shadow-sm border border-blue-900/40"
+                    />
+                  </div>
+                </div>
                 <span className="text-[7px] font-bold mt-1 max-w-[100px] text-center uppercase">Prepared by Engineer Tariq Zamir</span>
                 <span className="text-[8px] font-bold font-mono">{selectedBill.receiving_number || selectedBill.tracking_id}</span>
               </div>
@@ -6180,6 +6325,15 @@ export default function FileTracking() {
                     </div>
                   </div>
                 )}
+
+                {/* Full-Slip Official KWSC Watermark - Spans entire print & ticket */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[35] overflow-hidden">
+                  <img
+                    src="/kwsc-watermark-logo.png"
+                    alt="KWSC Watermark"
+                    className="w-[360px] h-[360px] object-contain opacity-[0.12] select-none filter contrast-125 print:opacity-[0.16]"
+                  />
+                </div>
                 {/* Header */}
                 <div className="bg-primary px-6 pt-8 pb-16 rounded-b-[40px] shadow-2xl relative overflow-hidden shrink-0">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
@@ -6282,11 +6436,21 @@ export default function FileTracking() {
                       {/* QR Section */}
                       <div className="mt-4 p-5 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-[30px] flex flex-col items-center gap-4 text-center shadow-inner print:bg-white print:border-none print:shadow-none">
                         <div className="bg-white p-3 rounded-2xl shadow-xl border-4 border-[#0ea5e9]/20 flex flex-col items-center">
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrFullScreen?.diary}/${qrFullScreen?.receiving}`)}&color=0ea5e9`}
-                            alt="QR"
-                            className="w-28 h-28"
-                          />
+                          <div className="relative inline-flex items-center justify-center">
+                            <img
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrFullScreen?.diary}/${qrFullScreen?.receiving}`)}&color=0ea5e9`}
+                              alt="QR"
+                              className="w-28 h-28"
+                            />
+                            {/* Central KWSC Watermark Logo */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <img
+                                src="/kwsc-watermark-logo.png"
+                                alt="KWSC Watermark"
+                                className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-md border-2 border-blue-900/40"
+                              />
+                            </div>
+                          </div>
                           <span className="text-[8px] font-bold mt-2 text-zinc-600 uppercase text-center">Prepared by Engineer Tariq Zamir</span>
                         </div>
                         <div>
@@ -6667,11 +6831,21 @@ export default function FileTracking() {
 
                     <div className="mt-6 pt-4 border-t-2 border-zinc-800 flex justify-between items-end">
                       <div className="text-center">
-                        <img 
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${ticket.cfo_diary_number}/${ticket.receiving_number}`)}&color=0ea5e9`}
-                          alt="QR Code" 
-                          className="w-16 h-16 mx-auto border border-zinc-200 p-1 rounded-md"
-                        />
+                        <div className="relative inline-flex items-center justify-center mx-auto border border-zinc-200 p-1 rounded-md bg-white">
+                          <img 
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${ticket.cfo_diary_number}/${ticket.receiving_number}`)}&color=0ea5e9`}
+                            alt="QR Code" 
+                            className="w-16 h-16"
+                          />
+                          {/* Central KWSC Watermark Logo */}
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <img
+                              src="/kwsc-watermark-logo.png"
+                              alt="KWSC Watermark"
+                              className="w-5 h-5 object-contain bg-white rounded-full p-0.5 shadow-sm border border-blue-900/40"
+                            />
+                          </div>
+                        </div>
                         <p className="text-zinc-400 text-[10px] font-medium tracking-tight mt-1 font-mono">CODE: {ticket.receiving_number}</p>
                       </div>
                       <div className="text-right">

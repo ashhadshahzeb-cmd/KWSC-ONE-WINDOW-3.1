@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +31,10 @@ import {
   Eye,
   BarChart3,
   Wifi,
-  Printer
+  Printer,
+  ShieldCheck,
+  FileText,
+  Building2
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
@@ -47,6 +50,71 @@ import {
 } from '@/hooks/useActivityLog';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Processing Time helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Formats milliseconds into a human-readable duration string.
+ * e.g. "2h 15m 30s", "45m 10s", "30s"
+ */
+const safeFormatDate = (dateStr: any) => {
+  if (!dateStr) return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  let d: Date;
+  if (dateStr instanceof Date) {
+    d = dateStr;
+  } else if (typeof dateStr === 'string') {
+    d = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T00:00:00');
+  } else {
+    d = new Date(dateStr);
+  }
+  if (isNaN(d.getTime())) return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatDuration = (ms: number): string => {
+  if (ms < 0) return '—';
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+};
+
+/**
+ * Given the full list of logs (newest-first) and a REGISTER log entry,
+ * finds the next action (FORWARD/EDIT/DELETE) on the same receiving_number
+ * and returns the formatted duration string. Returns null if not found.
+ */
+const getProcessingTime = (logs: ActivityLogEntry[], registerLog: ActivityLogEntry): string | null => {
+  if (registerLog.action !== 'REGISTER' || !registerLog.receiving_number) return null;
+
+  // logs are ordered newest-first; REGISTER is at higher index.
+  // We want entries that come AFTER the REGISTER in time (= lower index = newer).
+  const regIndex = logs.findIndex(l => l.id === registerLog.id);
+  if (regIndex === -1) return null;
+
+  // Slice everything before this index (newer entries), reverse to get chronological order,
+  // then find first matching action on the same file.
+  const nextAction = logs
+    .slice(0, regIndex)
+    .reverse()
+    .find(
+      l =>
+        l.receiving_number === registerLog.receiving_number &&
+        (l.action === 'FORWARD' || l.action === 'EDIT' || l.action === 'DELETE')
+    );
+
+  if (!nextAction) return null;
+
+  const diffMs =
+    new Date(nextAction.created_at).getTime() -
+    new Date(registerLog.created_at).getTime();
+  return formatDuration(diffMs);
+};
 
 const DiffViewer = ({ before, after }: { before: any, after: any }) => {
   if (!before || !after) return null;
@@ -145,6 +213,7 @@ const PayloadViewer = ({ data }: { data: any }) => {
 export default function ActivityLog() {
   const { userRole, isAdmin } = useAuth();
   const isAdminUser = userRole === 'admin' || isAdmin;
+  const hasAccess = true; // Activity log visible to all users
   
   const [logs, setLogs] = useState<ActivityLogEntry[]>([]);
   const [stats, setStats] = useState<UserStats[]>([]);
@@ -158,9 +227,18 @@ export default function ActivityLog() {
   // New Features State
   const [isLive, setIsLive] = useState(true);
   const [selectedLog, setSelectedLog] = useState<ActivityLogEntry | null>(null);
-const [isPrinting, setIsPrinting] = useState(false);
-const [isDuplicatePrint, setIsDuplicatePrint] = useState(false);
-const printRef = useRef<HTMLDivElement>(null);
+  const { sections } = useAppConfig();
+  const [qrPrintModal, setQrPrintModal] = useState<{
+    diary: string;
+    receiving: string;
+    subject: string;
+    created_date: string;
+    print_date: string;
+    mark_to?: string;
+    additional_mark_to?: string;
+  } | null>(null);
+  const [isPrintingQR, setIsPrintingQR] = useState(false);
+  const [isDuplicatePrint, setIsDuplicatePrint] = useState(false);
 
   // Filters
   const [page, setPage] = useState(0);
@@ -202,14 +280,14 @@ const printRef = useRef<HTMLDivElement>(null);
   };
 
   useEffect(() => {
-    if (isAdminUser) {
+    if (hasAccess) {
       loadData();
     }
-  }, [page, search, filterUser, filterAction, filterDateFrom, filterDateTo, isAdminUser]);
+  }, [page, search, filterUser, filterAction, filterDateFrom, filterDateTo, hasAccess]);
 
   // Supabase Realtime Subscription
   useEffect(() => {
-    if (!isAdminUser || !isLive) return;
+    if (!hasAccess || !isLive) return;
 
     const channel = supabase.channel('public:activity_log')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'activity_log' }, (payload) => {
@@ -327,34 +405,82 @@ const printRef = useRef<HTMLDivElement>(null);
     }
   };
 
-    // Print handling function – swaps body content with printable container
-  const handlePrint = () => {
-    if (printRef.current) {
-      const printContents = printRef.current.innerHTML;
-      const originalContents = document.body.innerHTML;
-      document.body.innerHTML = printContents;
-      window.print();
-      document.body.innerHTML = originalContents;
-      // Reset state after printing
-      setIsPrinting(false);
-      setSelectedLog(null);
-      setIsDuplicatePrint(false);
-      // Force re-render to clear residual refs
-      window.location.reload();
-    }
+  const getSectionName = (secId?: string) => {
+    if (!secId) return 'CFO Office';
+    const found = sections?.find(s => s.config_key === secId || s.id === secId);
+    return found?.config_label || secId;
   };
 
-  if (!isAdminUser) {
-    return (
-      <div className="h-[80vh] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <AlertCircle className="w-16 h-16 text-red-400 mx-auto" />
-          <h2 className="text-2xl font-black text-white">Access Denied</h2>
-          <p className="text-white/60">You do not have permission to view the Activity Log.</p>
-        </div>
-      </div>
-    );
-  }
+  const handleOpenPrint = (log: ActivityLogEntry) => {
+    const diary =
+      log.diary_number ||
+      log.details?.cfo_diary_number ||
+      log.details?.diary_number ||
+      log.details?.after?.cfo_diary_number ||
+      log.details?.before?.cfo_diary_number ||
+      '';
+    const receiving =
+      log.receiving_number ||
+      log.details?.receiving_number ||
+      log.details?.after?.receiving_number ||
+      log.details?.before?.receiving_number ||
+      '';
+
+    if (!diary && !receiving) {
+      toast.error('This activity is not linked to any file record.');
+      return;
+    }
+
+    const subject =
+      log.subject ||
+      log.details?.subject ||
+      log.details?.after?.subject ||
+      log.details?.before?.subject ||
+      'Subject Details';
+
+    const mark_to =
+      log.details?.mark_to ||
+      log.details?.after?.mark_to ||
+      log.details?.before?.mark_to ||
+      'cfo';
+
+    const additional_mark_to =
+      log.details?.additional_mark_to ||
+      log.details?.after?.additional_mark_to ||
+      log.details?.before?.additional_mark_to ||
+      '';
+
+    const created_date =
+      log.details?.inward_date ||
+      log.details?.registration_date ||
+      log.created_at;
+
+    const print_date =
+      log.details?.print_date ||
+      new Date().toISOString().split('T')[0];
+
+    setQrPrintModal({
+      diary,
+      receiving,
+      subject,
+      created_date,
+      print_date,
+      mark_to,
+      additional_mark_to,
+    });
+  };
+
+  const handlePrintQR = () => {
+    setIsPrintingQR(true);
+    document.body.classList.add('printing-qr-ticket');
+    setTimeout(() => {
+      window.print();
+      document.body.classList.remove('printing-qr-ticket');
+      setIsPrintingQR(false);
+    }, 250);
+  };
+
+
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-16">
@@ -604,6 +730,7 @@ const printRef = useRef<HTMLDivElement>(null);
                         <TableHead className="text-[10px] text-white/40 font-bold uppercase tracking-wider w-[160px]">User</TableHead>
                         <TableHead className="text-[10px] text-white/40 font-bold uppercase tracking-wider w-[120px]">Action</TableHead>
                         <TableHead className="text-[10px] text-white/40 font-bold uppercase tracking-wider">Context</TableHead>
+                        <TableHead className="text-[10px] text-white/40 font-bold uppercase tracking-wider w-[110px]">⏱ Proc. Time</TableHead>
                         <TableHead className="text-[10px] text-white/40 font-bold uppercase tracking-wider w-[100px] text-right">Details</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -670,6 +797,42 @@ const printRef = useRef<HTMLDivElement>(null);
                                 )}
                               </div>
                             </TableCell>
+                            {/* ⏱ Time Tracking Cell */}
+                            <TableCell className="align-top py-4">
+                              {log.action === 'REGISTER' ? (() => {
+                                const procTime = getProcessingTime(logs, log);
+                                const fillMs = log.details?.form_fill_duration_ms;
+                                const fillTime = typeof fillMs === 'number' ? formatDuration(fillMs) : null;
+                                return (
+                                  <div className="flex flex-col gap-1.5">
+                                    {/* Fill Time — how long user took to fill the form */}
+                                    {fillTime ? (
+                                      <div className="flex flex-col gap-0.5">
+                                        <span className="text-[8px] text-amber-400/50 uppercase tracking-wider">Fill Time</span>
+                                        <span className="text-[10px] font-mono font-bold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded w-max">
+                                          ✍ {fillTime}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[9px] text-white/20 italic">Fill: —</span>
+                                    )}
+                                    {/* Process Time — how long before next action */}
+                                    {procTime ? (
+                                      <div className="flex flex-col gap-0.5">
+                                        <span className="text-[8px] text-violet-400/50 uppercase tracking-wider">Process Time</span>
+                                        <span className="text-[10px] font-mono font-bold text-violet-300 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded w-max">
+                                          ⚡ {procTime}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-[9px] text-white/20 italic">Process: Pending…</span>
+                                    )}
+                                  </div>
+                                );
+                              })() : (
+                                <span className="text-[10px] text-white/15">—</span>
+                              )}
+                            </TableCell>
                             <TableCell className="align-top py-4 text-right">
                               <Button
                                 variant="ghost"
@@ -684,14 +847,8 @@ const printRef = useRef<HTMLDivElement>(null);
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 w-7 p-0 bg-white/5 border border-white/10 hover:bg-white/10 rounded-lg text-white/60 hover:text-white"
-                                onClick={() => {
-                                  setSelectedLog(log);
-                                  setIsPrinting(true);
-                                  setTimeout(() => {
-                                    handlePrint();
-                                  }, 0);
-                                }}
-                                title="Print"
+                                onClick={() => handleOpenPrint(log)}
+                                title="Print Tracking Slip (QR)"
                               >
                                 <Printer className="w-3.5 h-3.5" />
                               </Button>
@@ -784,35 +941,243 @@ const printRef = useRef<HTMLDivElement>(null);
               )}
             </div>
 
+            {selectedLog && (selectedLog.diary_number || selectedLog.receiving_number || selectedLog.details?.cfo_diary_number || selectedLog.details?.receiving_number) && (
+              <div className="pt-2 flex justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 border-primary/30 text-primary hover:bg-primary hover:text-black font-bold"
+                  onClick={() => handleOpenPrint(selectedLog)}
+                >
+                  <Printer className="w-3.5 h-3.5" /> Print Tracking Slip (QR)
+                </Button>
+              </div>
+            )}
+
           </div>
         </DialogContent>
       </Dialog>
-{/* Printable container – hidden on screen, visible only during print */}
-<div className={`print-only hidden ${isPrinting ? '' : 'no-print'}`}>
-  <div ref={printRef} className="p-6 font-sans text-black bg-white min-h-[210mm] w-[148mm] mx-auto relative overflow-hidden">
-    {isDuplicatePrint && (
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 overflow-hidden">
-        <div className="text-[100px] font-black uppercase text-gray-500/40 -rotate-45 select-none">
-          DUPLICATE
-        </div>
-      </div>
-    )}
-    {/* Printable content – reuse details from selectedLog */}
-    <div className="space-y-4">
-      <h2 className="text-lg font-bold">{selectedLog?.action} Details</h2>
-      <p className="text-sm">User: {selectedLog?.user_name} ({selectedLog?.user_role})</p>
-      <p className="text-sm">Date: {selectedLog ? new Date(selectedLog.created_at).toLocaleString() : ''}</p>
-      <p className="text-sm">Diary No: {selectedLog?.diary_number || 'N/A'}</p>
-      <p className="text-sm">Receiving No: {selectedLog?.receiving_number || 'N/A'}</p>
-      <p className="text-sm">Subject: {selectedLog?.subject || 'N/A'}</p>
-      {selectedLog?.details && (selectedLog.details.before !== undefined || selectedLog.details.after !== undefined) ? (
-        <DiffViewer before={selectedLog.details.before} after={selectedLog.details.after || selectedLog.details} />
-      ) : (
-        <PayloadViewer data={selectedLog?.details} />
-      )}
-    </div>
-  </div>
-</div>
+{/* Full Screen Ticket & QR Modal (Matches File Tracking Layout exactly) */}
+      <Dialog open={!!qrPrintModal} onOpenChange={(open) => !open && setQrPrintModal(null)}>
+        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-[40px] border-none bg-zinc-950 shadow-2xl">
+          {qrPrintModal && (
+            <div className={`w-full h-full qr-ticket-printable ${isPrintingQR ? 'overflow-visible max-h-none' : 'max-h-[90vh] overflow-y-auto'} overflow-x-hidden font-sans pb-6 relative`}>
+              {/* DUPLICATE Watermark for QR Ticket */}
+              {isDuplicatePrint && (
+                <div className="hidden print:flex absolute inset-0 items-center justify-center pointer-events-none z-[100] overflow-hidden">
+                  <div 
+                    className="text-[100px] font-black uppercase text-gray-500/40 -rotate-45 select-none"
+                    style={{ WebkitTextStroke: '2px rgba(100, 116, 139, 0.5)' }}
+                  >
+                    DUPLICATE
+                  </div>
+                </div>
+              )}
+
+              {/* Full-Slip Official KWSC Watermark - Spans entire print & ticket */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[35] overflow-hidden">
+                <img
+                  src="/kwsc-watermark-logo.png"
+                  alt="KWSC Watermark"
+                  className="w-[360px] h-[360px] object-contain opacity-[0.12] select-none filter contrast-125 print:opacity-[0.16]"
+                />
+              </div>
+
+              {/* Header */}
+              <div className="bg-primary px-6 pt-8 pb-16 rounded-b-[40px] shadow-2xl relative overflow-hidden shrink-0">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full -ml-10 -mb-10 blur-2xl"></div>
+
+                <div className="relative flex justify-center items-center mb-4">
+                  <ShieldCheck className="w-10 h-10 text-emerald-400" />
+                </div>
+
+                <div className="relative text-center space-y-1">
+                  <h1 className="text-white text-xl font-black tracking-tighter uppercase">Verified Tracking</h1>
+                  <p className="text-primary-foreground/70 text-[10px] font-bold uppercase tracking-widest">Karachi Water Corporation</p>
+                </div>
+              </div>
+
+              {/* Main Content Card */}
+              <div className="px-5 -mt-10 relative z-10 shrink-0">
+                <Card className="rounded-[30px] border-none shadow-xl overflow-hidden bg-white">
+                  <div className="p-1 bg-gradient-to-r from-emerald-500 to-primary"></div>
+                  <CardContent className="pt-6 space-y-6">
+
+                    {/* Tracking Numbers */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-primary/5 relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-primary/50 uppercase tracking-[0.1em]">CFO Diary</span>
+                        <p className="text-sm font-black text-zinc-800 font-mono mt-1 tracking-tighter">{qrPrintModal.diary || '—'}</p>
+                      </div>
+                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-emerald-500/5 relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-emerald-500/50 uppercase tracking-[0.1em]">Receiving No</span>
+                        <p className="text-sm font-black text-zinc-800 font-mono mt-1 tracking-tighter">{qrPrintModal.receiving || '—'}</p>
+                      </div>
+                    </div>
+
+                    {/* File Info */}
+                    <div className="space-y-4 pt-4 border-t border-zinc-100">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Subject</span>
+                          <p className="text-xs font-bold text-zinc-800 leading-tight">{qrPrintModal.subject}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
+                          <Calendar className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Created Date</span>
+                          <p className="text-xs font-black text-amber-600 tracking-tight">{safeFormatDate(qrPrintModal.created_date)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Printed Date</span>
+                          <p className="text-xs font-black text-emerald-600 tracking-tight">
+                            {safeFormatDate(qrPrintModal.print_date)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Current Section</span>
+                          <p className="text-xs font-black text-blue-600 uppercase tracking-tight">{getSectionName(qrPrintModal.mark_to)}</p>
+                        </div>
+                      </div>
+                      {qrPrintModal.additional_mark_to && (
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 shrink-0">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-bold text-zinc-400 uppercase">Additional Mark To</span>
+                            <p className="text-xs font-black text-purple-600 uppercase tracking-tight">{getSectionName(qrPrintModal.additional_mark_to)}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* QR Section */}
+                    <div className="mt-4 p-5 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-[30px] flex flex-col items-center gap-4 text-center shadow-inner print:bg-white print:border-none print:shadow-none">
+                      <div className="bg-white p-3 rounded-2xl shadow-xl border-4 border-[#0ea5e9]/20 flex flex-col items-center">
+                        <div className="relative inline-flex items-center justify-center">
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`)}&color=0ea5e9`}
+                            alt="QR"
+                            className="w-28 h-28"
+                          />
+                          {/* Centered KWSC Watermark Logo */}
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <img
+                              src="/kwsc-watermark-logo.png"
+                              alt="KWSC Watermark"
+                              className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-md border-2 border-blue-900/40"
+                            />
+                          </div>
+                        </div>
+                        <span className="text-[8px] font-bold mt-2 text-zinc-600 uppercase text-center">Prepared by Engineer Tariq Zamir</span>
+                      </div>
+                      <div>
+                        <p className="text-primary text-sm font-black uppercase tracking-widest print:text-primary">Scan to Track Live</p>
+                        <p className="text-zinc-400 text-[10px] font-medium tracking-tight mt-1 print:text-zinc-400 font-mono">CODE: {qrPrintModal.receiving}</p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex flex-col gap-2 justify-center">
+                      <div className="no-print space-y-2 mb-2 bg-slate-500/5 p-3 rounded-lg border border-slate-500/20">
+                        <div className="flex items-center gap-2 mb-3 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                          <Checkbox 
+                            id="duplicate-print-qr-activity" 
+                            checked={isDuplicatePrint}
+                            onCheckedChange={(checked) => setIsDuplicatePrint(!!checked)}
+                          />
+                          <Label htmlFor="duplicate-print-qr-activity" className="text-[10px] font-bold text-amber-600 cursor-pointer uppercase">Print with DUPLICATE watermark</Label>
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-amber-600">Override Created Date</label>
+                          <input
+                            type="date"
+                            value={qrPrintModal.created_date ? qrPrintModal.created_date.split('T')[0] : ''}
+                            onChange={e => setQrPrintModal({ ...qrPrintModal, created_date: e.target.value })}
+                            className="w-full h-8 text-xs bg-white border border-amber-500/30 text-amber-600 font-bold rounded-md px-2 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-emerald-600">Override Print Date</label>
+                          <input
+                            type="date"
+                            value={qrPrintModal.print_date ? qrPrintModal.print_date.split('T')[0] : ''}
+                            onChange={e => setQrPrintModal({ ...qrPrintModal, print_date: e.target.value })}
+                            className="w-full h-8 text-xs bg-white border border-emerald-500/30 text-emerald-600 font-bold rounded-md px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl no-print"
+                        onClick={handlePrintQR}
+                      >
+                        <Printer className="w-4 h-4 mr-2" /> Print Tracking Slip
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <style>{`
+        ${isPrintingQR ? `
+          @media print {
+            body * { 
+              visibility: hidden !important; 
+            }
+            .qr-ticket-printable, .qr-ticket-printable * {
+              visibility: visible !important; 
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+            .qr-ticket-printable {
+              position: fixed !important;
+              left: 50% !important;
+              top: 10px !important;
+              transform: translateX(-50%) !important;
+              width: 420px !important;
+              max-width: 100% !important;
+              display: block !important;
+              background: transparent !important;
+              box-shadow: none !important;
+              border: none !important;
+              padding: 0 !important;
+              margin: 0 !important;
+            }
+            .no-print { display: none !important; }
+            @page { size: auto; margin: 0; }
+          }
+        ` : ''}
+
+        @media screen {
+          [data-radix-portal] .bg-zinc-950, [data-radix-portal] .bg-slate-50 { background-color: #09090b !important; }
+          [data-radix-portal] .bg-white { background-color: #18181b !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+          [data-radix-portal] .text-zinc-800, [data-radix-portal] .text-zinc-400 { color: #f4f4f5 !important; }
+          [data-radix-portal] .bg-slate-50.rounded-2xl { background-color: #27272a !important; border: 1px solid rgba(255,255,255,0.05) !important; }
+          [data-radix-portal] .border-zinc-100 { border-color: rgba(255,255,255,0.05) !important; }
+        }
+      `}</style>
     </div>
   );
 }

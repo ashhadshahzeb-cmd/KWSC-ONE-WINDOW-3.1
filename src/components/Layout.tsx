@@ -76,7 +76,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { to: "/messages", icon: MessageCircle, label: "Messages", visible: !isTransferUser && !isHRMSEmployee },
     { to: "/user-management", icon: Users, label: "User Management", visible: (userRole === 'admin' || userRole === 'super_admin') && !isTransferUser && !isHRMSEmployee },
     { to: "/admin-config", icon: Settings2, label: "Admin Config", visible: (userRole === 'admin' || userRole === 'super_admin') && !isTransferUser && !isHRMSEmployee },
-    { to: "/activity-log", icon: Activity, label: "Activity Log", visible: (userRole === 'admin' || userRole === 'super_admin') && !isTransferUser && !isHRMSEmployee },
+    { to: "/activity-log", icon: Activity, label: "Activity Log", visible: !isTransferUser && !isHRMSEmployee },
     { to: "/file-analytics", icon: BarChart3, label: "File Analytics", visible: (userRole === 'admin' || userRole === 'super_admin' || userRole === 'cfo') && !isTransferUser && !isHRMSEmployee },
     { to: "/revenue-collection", icon: BarChart3, label: "Revenue Dashboard", visible: (userRole === 'admin' || userRole === 'super_admin' || userRole === 'cfo') && !isTransferUser && !isHRMSEmployee },
   ].filter(item => item.visible);
