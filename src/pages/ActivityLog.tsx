@@ -36,7 +36,9 @@ import {
   FileText,
   Building2,
   Image as ImageIcon,
-  ExternalLink
+  ExternalLink,
+  Maximize2,
+  X
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
@@ -232,7 +234,71 @@ export default function ActivityLog() {
   const [selectedLog, setSelectedLog] = useState<ActivityLogEntry | null>(null);
   const [selectedLogImage, setSelectedLogImage] = useState<string | null>(null);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   const { sections } = useAppConfig();
+
+  // Opens image in new tab using Blob URL to prevent Chrome about:blank top-frame block
+  const openInNewTab = (imgUrl: string) => {
+    if (!imgUrl) return;
+    if (imgUrl.startsWith('data:')) {
+      try {
+        const parts = imgUrl.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        const win = window.open(blobUrl, '_blank');
+        if (win) {
+          win.focus();
+          return;
+        }
+      } catch (err) {
+        console.warn('Blob creation error:', err);
+      }
+    }
+    window.open(imgUrl, '_blank');
+  };
+
+  // Downloads image directly via Blob
+  const handleDownloadImage = (imgUrl: string, fileName: string) => {
+    if (!imgUrl) return;
+    if (imgUrl.startsWith('data:')) {
+      try {
+        const parts = imgUrl.split(',');
+        const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+        const bstr = atob(parts[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        return;
+      } catch (err) {
+        console.warn('Blob download error:', err);
+      }
+    }
+    const a = document.createElement('a');
+    a.href = imgUrl;
+    a.download = fileName;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
 
   // Resolve document image whenever selectedLog opens
   useEffect(() => {
@@ -890,7 +956,7 @@ export default function ActivityLog() {
                                           className="w-5 h-5 object-cover rounded border border-teal-500/50 cursor-pointer hover:scale-150 transition-transform shrink-0 shadow-sm"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            window.open(rowImg, '_blank');
+                                            setFullScreenImage(rowImg);
                                           }}
                                         />
                                       );
@@ -1044,18 +1110,30 @@ export default function ActivityLog() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-7 text-xs bg-white/5 hover:bg-white/10 text-white rounded-lg gap-1.5"
-                      onClick={() => window.open(selectedLogImage, '_blank')}
+                      className="h-7 text-xs bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-lg gap-1.5"
+                      onClick={() => setFullScreenImage(selectedLogImage)}
+                      title="Open Fullscreen View inside page"
                     >
-                      <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> Open Full Image
+                      <Maximize2 className="w-3.5 h-3.5" /> Fullscreen View
                     </Button>
-                    <a
-                      href={selectedLogImage}
-                      download={`document-${selectedLog?.receiving_number || selectedLog?.diary_number || 'file'}.jpg`}
-                      className="inline-flex items-center justify-center h-7 px-2.5 text-xs bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-lg gap-1.5 font-medium transition-colors"
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs bg-white/5 hover:bg-white/10 text-white rounded-lg gap-1.5"
+                      onClick={() => openInNewTab(selectedLogImage)}
+                      title="Open in new browser tab"
                     >
-                      <Download className="w-3.5 h-3.5" /> Download
-                    </a>
+                      <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> New Tab
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs bg-white/5 hover:bg-white/10 text-white rounded-lg gap-1.5"
+                      onClick={() => handleDownloadImage(selectedLogImage, `document-${selectedLog?.receiving_number || selectedLog?.diary_number || 'file'}.jpg`)}
+                      title="Download image file"
+                    >
+                      <Download className="w-3.5 h-3.5 text-teal-400" /> Download
+                    </Button>
                   </div>
                 )}
               </div>
@@ -1070,12 +1148,15 @@ export default function ActivityLog() {
                     src={selectedLogImage}
                     alt="Attached Document"
                     className="max-h-80 w-auto object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.01]"
-                    onClick={() => window.open(selectedLogImage, '_blank')}
-                    title="Click to open full view in new tab"
+                    onClick={() => setFullScreenImage(selectedLogImage)}
+                    title="Click to view full screen"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                  <div 
+                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer gap-2"
+                    onClick={() => setFullScreenImage(selectedLogImage)}
+                  >
                     <span className="text-xs font-bold text-white bg-black/80 px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 shadow-lg">
-                      <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> Click to view full image in new tab
+                      <Maximize2 className="w-3.5 h-3.5 text-teal-400" /> Click for Fullscreen View
                     </span>
                   </div>
                 </div>
@@ -1300,6 +1381,60 @@ export default function ActivityLog() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* FULLSCREEN IMAGE LIGHTBOX MODAL */}
+      <Dialog open={!!fullScreenImage} onOpenChange={(open) => !open && setFullScreenImage(null)}>
+        <DialogContent className="max-w-[96vw] md:max-w-5xl max-h-[96vh] p-4 bg-[#09090b]/98 border border-white/20 text-white rounded-3xl flex flex-col items-center justify-between overflow-hidden shadow-2xl z-[120]">
+          <div className="w-full flex items-center justify-between pb-3 border-b border-white/10 shrink-0">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-teal-400" />
+              <span className="text-sm font-bold text-white tracking-wide">
+                Attached Document Photo — Full Size
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs bg-white/10 hover:bg-white/20 text-white rounded-lg gap-1.5"
+                onClick={() => fullScreenImage && openInNewTab(fullScreenImage)}
+                title="Open in a dedicated browser tab"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> Open in New Tab
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 rounded-lg gap-1.5 font-bold"
+                onClick={() => fullScreenImage && handleDownloadImage(fullScreenImage, `document-${selectedLog?.receiving_number || 'file'}.jpg`)}
+                title="Download original document photo"
+              >
+                <Download className="w-3.5 h-3.5" /> Download
+              </Button>
+            </div>
+          </div>
+          <div className="w-full flex-1 overflow-auto flex items-center justify-center p-2 min-h-[50vh] max-h-[82vh] bg-black/60 rounded-2xl border border-white/5 my-2">
+            {fullScreenImage && (
+              <img
+                src={fullScreenImage}
+                alt="Full Document"
+                className="max-h-[78vh] w-auto max-w-full object-contain rounded-xl shadow-2xl transition-transform"
+              />
+            )}
+          </div>
+          <div className="w-full flex justify-between items-center pt-2 text-[11px] text-white/40 shrink-0">
+            <span>High-Resolution Document Preview</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs bg-white/5 hover:bg-white/10 text-white rounded-lg border-white/10"
+              onClick={() => setFullScreenImage(null)}
+            >
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
