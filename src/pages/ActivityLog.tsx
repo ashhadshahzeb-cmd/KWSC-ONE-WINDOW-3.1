@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,7 +34,9 @@ import {
   Printer,
   ShieldCheck,
   FileText,
-  Building2
+  Building2,
+  Image as ImageIcon,
+  ExternalLink
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
@@ -227,7 +229,63 @@ export default function ActivityLog() {
   // New Features State
   const [isLive, setIsLive] = useState(true);
   const [selectedLog, setSelectedLog] = useState<ActivityLogEntry | null>(null);
+  const [selectedLogImage, setSelectedLogImage] = useState<string | null>(null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
   const { sections } = useAppConfig();
+
+  // Resolve document image whenever selectedLog opens
+  useEffect(() => {
+    if (!selectedLog) {
+      setSelectedLogImage(null);
+      setIsLoadingImage(false);
+      return;
+    }
+
+    // 1. Direct check in log details (REGISTER, EDIT, FORWARD payloads)
+    const directImage =
+      selectedLog.details?.file_image ||
+      selectedLog.details?.after?.file_image ||
+      selectedLog.details?.before?.file_image ||
+      (Array.isArray(selectedLog.details?.history) &&
+        [...selectedLog.details.history].reverse().find((h: any) => h?.file_image)?.file_image);
+
+    if (directImage) {
+      setSelectedLogImage(directImage);
+      return;
+    }
+
+    // 2. Fallback: Query file_tracking_records by receiving_number or diary_number
+    const rNo = selectedLog.receiving_number || selectedLog.details?.receiving_number;
+    const dNo = selectedLog.diary_number || selectedLog.details?.cfo_diary_number;
+
+    if (rNo || dNo) {
+      setIsLoadingImage(true);
+      let query = supabase.from('file_tracking_records').select('file_image, history');
+      if (rNo) {
+        query = query.eq('receiving_number', rNo);
+      } else if (dNo) {
+        query = query.eq('cfo_diary_number', dNo);
+      }
+      query
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          setIsLoadingImage(false);
+          if (data) {
+            const img =
+              data.file_image ||
+              (Array.isArray(data.history) &&
+                [...data.history].reverse().find((h: any) => h?.file_image)?.file_image);
+            if (img) setSelectedLogImage(img);
+          }
+        })
+        .catch(() => {
+          setIsLoadingImage(false);
+        });
+    } else {
+      setSelectedLogImage(null);
+    }
+  }, [selectedLog]);
   const [qrPrintModal, setQrPrintModal] = useState<{
     diary: string;
     receiving: string;
@@ -789,9 +847,31 @@ export default function ActivityLog() {
                                   </div>
                                 )}
                                 {log.subject ? (
-                                  <p className="text-xs text-white/70 font-medium truncate max-w-md" title={log.subject}>
-                                    {log.subject}
-                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs text-white/70 font-medium truncate max-w-md" title={log.subject}>
+                                      {log.subject}
+                                    </p>
+                                    {(() => {
+                                      const rowImg =
+                                        log.details?.file_image ||
+                                        log.details?.after?.file_image ||
+                                        (Array.isArray(log.details?.history) &&
+                                          [...log.details.history].reverse().find((h: any) => h?.file_image)?.file_image);
+                                      if (!rowImg) return null;
+                                      return (
+                                        <img
+                                          src={rowImg}
+                                          alt="doc"
+                                          title="Attached Document Photo (Click to view full image)"
+                                          className="w-5 h-5 object-cover rounded border border-teal-500/50 cursor-pointer hover:scale-150 transition-transform shrink-0 shadow-sm"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.open(rowImg, '_blank');
+                                          }}
+                                        />
+                                      );
+                                    })()}
+                                  </div>
                                 ) : (
                                   <p className="text-xs text-white/40 italic">No subject</p>
                                 )}
@@ -927,6 +1007,58 @@ export default function ActivityLog() {
                 <div className="text-sm text-white/90">{selectedLog?.subject || 'N/A'}</div>
               </div>
             </div>
+
+            {/* Attached Document Photo Section */}
+            {(selectedLogImage || isLoadingImage) && (
+              <div className="bg-white/[0.02] p-4 rounded-xl border border-white/[0.05] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-teal-400" />
+                    <Label className="text-[10px] text-teal-300 uppercase tracking-widest font-bold">Attached Document / File Picture</Label>
+                  </div>
+                  {selectedLogImage && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs bg-white/5 hover:bg-white/10 text-white rounded-lg gap-1.5"
+                        onClick={() => window.open(selectedLogImage, '_blank')}
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> Open Full Image
+                      </Button>
+                      <a
+                        href={selectedLogImage}
+                        download={`document-${selectedLog?.receiving_number || selectedLog?.diary_number || 'file'}.jpg`}
+                        className="inline-flex items-center justify-center h-7 px-2.5 text-xs bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-lg gap-1.5 font-medium transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" /> Download
+                      </a>
+                    </div>
+                  )}
+                </div>
+
+                {isLoadingImage ? (
+                  <div className="flex items-center justify-center py-8 text-white/40 text-xs gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-teal-400" /> Loading attached document image...
+                  </div>
+                ) : selectedLogImage ? (
+                  <div className="relative group rounded-xl overflow-hidden border border-white/10 bg-black/40 flex items-center justify-center max-h-80">
+                    <img
+                      src={selectedLogImage}
+                      alt="Attached Document"
+                      className="max-h-80 w-auto object-contain rounded-lg cursor-pointer transition-transform hover:scale-[1.01]"
+                      onClick={() => window.open(selectedLogImage, '_blank')}
+                      title="Click to open full view in new tab"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                      <span className="text-xs font-bold text-white bg-black/80 px-3 py-1.5 rounded-full border border-white/20 flex items-center gap-1.5 shadow-lg">
+                        <ExternalLink className="w-3.5 h-3.5 text-teal-400" /> Click to view full image in new tab
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             {/* Diff Viewer */}
             <div>
