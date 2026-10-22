@@ -1624,6 +1624,338 @@ export default function FileTracking() {
       }
     }
 
+    // High definition print window
+    const diaryNo = qrFullScreen?.diary || '';
+    const receivingNo = qrFullScreen?.receiving || '';
+    const ticket = qrFullScreen ? records.find(r => r.cfo_diary_number === qrFullScreen.diary || r.receiving_number === qrFullScreen.receiving) : null;
+    const subjectText = qrFullScreen?.subject || ticket?.subject || 'Subject Details';
+    const markToName = qrFullScreen?.mark_to ? (sections.find((s: any) => s.id === qrFullScreen.mark_to)?.name || qrFullScreen.mark_to) : (ticket?.mark_to ? (sections.find((s: any) => s.id === ticket.mark_to)?.name || ticket.mark_to) : 'CFO Office');
+    const addMarkToName = qrFullScreen?.additional_mark_to ? (sections.find((s: any) => s.id === qrFullScreen.additional_mark_to)?.name || qrFullScreen.additional_mark_to) : (ticket?.additional_mark_to ? (sections.find((s: any) => s.id === ticket.additional_mark_to)?.name || ticket.additional_mark_to) : '');
+    const createdDateFormatted = safeFormatDate(qrFullScreen?.created_date);
+    const printDateFormatted = safeFormatDate(qrFullScreen?.print_date);
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
+      `${window.location.origin}/public-track/${diaryNo}/${receivingNo}`
+    )}&color=1e3a8a&margin=0`;
+
+    const printWin = window.open('', '_blank', 'width=550,height=800');
+    if (printWin) {
+      const htmlContent = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tracking Slip - ${receivingNo || diaryNo}</title>
+    <style>
+      @page { size: A5 portrait; margin: 6mm; }
+      * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: #ffffff;
+        color: #0f172a;
+        display: flex;
+        justify-content: center;
+        padding: 8px;
+      }
+      .slip {
+        width: 100%;
+        max-width: 380px;
+        border: 2px solid #1e3a8a;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #ffffff;
+        position: relative;
+      }
+      .slip-header {
+        background: #1e3a8a;
+        color: #ffffff;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 2px solid #1e3a8a;
+      }
+      .slip-header-logo {
+        width: 36px;
+        height: 36px;
+        background: #ffffff;
+        border-radius: 6px;
+        padding: 2px;
+        object-fit: contain;
+        flex-shrink: 0;
+      }
+      .slip-header-text h1 {
+        font-size: 11.5px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        line-height: 1.2;
+        color: #ffffff;
+      }
+      .slip-header-text p {
+        font-size: 8px;
+        font-weight: 600;
+        color: #bfdbfe;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 2px;
+      }
+      .slip-badge {
+        font-size: 7.5px;
+        font-weight: 900;
+        background: #ffffff;
+        color: #1e3a8a;
+        padding: 2px 6px;
+        border-radius: 3px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-left: auto;
+        white-space: nowrap;
+      }
+      .number-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border-bottom: 1.5px solid #e2e8f0;
+      }
+      .number-box {
+        padding: 8px 10px;
+        text-align: center;
+      }
+      .number-box:first-child {
+        border-right: 1.5px solid #e2e8f0;
+        background: #f0f7ff;
+      }
+      .number-box:last-child {
+        background: #ecfdf5;
+      }
+      .number-label {
+        font-size: 7.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 2px;
+        display: block;
+      }
+      .number-box:first-child .number-label { color: #1e3a8a; }
+      .number-box:last-child .number-label { color: #047857; }
+      .number-val {
+        font-size: 13px;
+        font-weight: 900;
+        font-family: 'Courier New', monospace;
+        color: #0f172a;
+        word-break: break-all;
+      }
+      .slip-body {
+        padding: 10px 12px;
+      }
+      .info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 10px;
+      }
+      .info-table tr {
+        border-bottom: 1px solid #f1f5f9;
+      }
+      .info-table td {
+        padding: 5px 0;
+        vertical-align: top;
+      }
+      .info-lbl {
+        font-size: 7.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        width: 90px;
+        white-space: nowrap;
+      }
+      .info-val {
+        font-size: 10.5px;
+        font-weight: 700;
+        color: #1e293b;
+        line-height: 1.35;
+      }
+      .info-val.blue {
+        color: #1e3a8a;
+        font-weight: 800;
+      }
+      .info-val.purple {
+        color: #7c3aed;
+        font-weight: 800;
+      }
+      .qr-card {
+        background: #f8fafc;
+        border: 1.5px solid #1e3a8a;
+        border-radius: 8px;
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 4px;
+      }
+      .qr-img-box {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 3px;
+        flex-shrink: 0;
+      }
+      .qr-img-box img {
+        width: 85px;
+        height: 85px;
+        display: block;
+      }
+      .qr-details {
+        flex: 1;
+      }
+      .qr-title {
+        font-size: 9px;
+        font-weight: 900;
+        color: #1e3a8a;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin-bottom: 2px;
+      }
+      .qr-code {
+        font-size: 8px;
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        color: #334155;
+        word-break: break-all;
+        margin-bottom: 4px;
+      }
+      .qr-sub {
+        font-size: 7px;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+      }
+      .slip-footer {
+        margin-top: 8px;
+        padding-top: 6px;
+        border-top: 1px dashed #cbd5e1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 7px;
+        color: #94a3b8;
+        font-weight: 600;
+      }
+      .watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-35deg);
+        font-size: 50px;
+        font-weight: 900;
+        color: rgba(239, 68, 68, 0.12);
+        text-transform: uppercase;
+        pointer-events: none;
+        user-select: none;
+        white-space: nowrap;
+        letter-spacing: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="slip">
+      ${isDuplicatePrint ? '<div class="watermark">DUPLICATE</div>' : ''}
+      <div class="slip-header">
+        <img src="/kwsc-watermark-logo.png" alt="KW&SC" class="slip-header-logo" />
+        <div class="slip-header-text">
+          <h1>Karachi Water &amp; Sewerage Corporation</h1>
+          <p>One Window Facilitation Centre &bull; Finance Department</p>
+        </div>
+        <span class="slip-badge">Official Slip</span>
+      </div>
+
+      <div class="number-grid">
+        <div class="number-box">
+          <span class="number-label">CFO Diary No</span>
+          <span class="number-val">${diaryNo || '—'}</span>
+        </div>
+        <div class="number-box">
+          <span class="number-label">Receiving No</span>
+          <span class="number-val">${receivingNo || '—'}</span>
+        </div>
+      </div>
+
+      <div class="slip-body">
+        <table class="info-table">
+          <tr>
+            <td class="info-lbl">Subject</td>
+            <td class="info-val">${subjectText}</td>
+          </tr>
+          <tr>
+            <td class="info-lbl">Created Date</td>
+            <td class="info-val">${createdDateFormatted}</td>
+          </tr>
+          <tr>
+            <td class="info-lbl">Printed Date</td>
+            <td class="info-val">${printDateFormatted}</td>
+          </tr>
+          <tr>
+            <td class="info-lbl">Forwarded To</td>
+            <td class="info-val blue">${markToName}</td>
+          </tr>
+          ${addMarkToName ? `
+          <tr>
+            <td class="info-lbl">Also Marked To</td>
+            <td class="info-val purple">${addMarkToName}</td>
+          </tr>` : ''}
+        </table>
+
+        <div class="qr-card">
+          <div class="qr-img-box">
+            <img src="${qrUrl}" alt="QR" crossorigin="anonymous" />
+          </div>
+          <div class="qr-details">
+            <div class="qr-title">Scan to Track Live</div>
+            <div class="qr-code">CODE: ${receivingNo || diaryNo}</div>
+            <div class="qr-sub">Prepared by: Engr. Tariq Zamir</div>
+            <div class="qr-sub" style="margin-top: 2px;">KW&amp;SC Official File Tracking</div>
+          </div>
+        </div>
+
+        <div class="slip-footer">
+          <span>Official Tracking Verification Slip</span>
+          <span>Printed: ${new Date().toLocaleDateString('en-PK')}</span>
+        </div>
+      </div>
+    </div>
+    <script>
+      function doPrint() {
+        window.print();
+        window.close();
+      }
+      window.onload = function() {
+        var imgs = document.querySelectorAll('img');
+        var total = imgs.length;
+        if (total === 0) { setTimeout(doPrint, 200); return; }
+        var loaded = 0;
+        function onLoad() {
+          loaded++;
+          if (loaded >= total) setTimeout(doPrint, 150);
+        }
+        imgs.forEach(function(img) {
+          if (img.complete && img.naturalWidth > 0) { onLoad(); }
+          else {
+            img.onload = onLoad;
+            img.onerror = onLoad;
+          }
+        });
+        setTimeout(doPrint, 3500);
+      };
+    </script>
+  </body>
+</html>`;
+
+      printWin.document.open();
+      printWin.document.write(htmlContent);
+      printWin.document.close();
+      return;
+    }
+
+    // Direct fallback if popup blocked:
     setIsPrintingQR(true);
     document.body.classList.add('printing-qr-ticket');
     setTimeout(() => {
@@ -6427,196 +6759,187 @@ export default function FileTracking() {
         </div>
       </div>
 
-      {/* Full Screen Ticket & QR Modal (Matches Public Tracking Layout) */}
+      {/* Full Screen Ticket & QR Modal (Clean Flat #1e3a8a Theme) */}
       <Dialog open={!!qrFullScreen} onOpenChange={(open) => !open && setQrFullScreen(null)}>
-        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-[40px] border-none bg-zinc-950 shadow-2xl">
+        <DialogContent className="sm:max-w-[460px] p-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-none">
           {(() => {
             const ticket = qrFullScreen ? records.find(r => r.cfo_diary_number === qrFullScreen.diary || r.receiving_number === qrFullScreen.receiving) : null;
+            const subjectText = qrFullScreen?.subject || ticket?.subject || "Subject Details";
+            const markToName = qrFullScreen?.mark_to ? (sections.find((s: any) => s.id === qrFullScreen.mark_to)?.name || qrFullScreen.mark_to) : (ticket?.mark_to ? (sections.find((s: any) => s.id === ticket.mark_to)?.name || ticket.mark_to) : "CFO Office");
+            const addMarkToName = qrFullScreen?.additional_mark_to ? (sections.find((s: any) => s.id === qrFullScreen.additional_mark_to)?.name || qrFullScreen.additional_mark_to) : (ticket?.additional_mark_to ? (sections.find((s: any) => s.id === ticket.additional_mark_to)?.name || ticket.additional_mark_to) : "");
+
             return (
-              <div className={`w-full h-full ${isPrintingQR ? 'overflow-visible max-h-none' : 'max-h-[90vh] overflow-y-auto'} overflow-x-hidden font-sans pb-6 relative`}>
-                {/* DUPLICATE Watermark for QR Ticket */}
+              <div className="w-full max-h-[90vh] overflow-y-auto font-sans bg-white relative qr-ticket-printable">
+                {/* DUPLICATE Watermark */}
                 {isDuplicatePrint && (
-                  <div className="hidden print:flex absolute inset-0 items-center justify-center pointer-events-none z-[100] overflow-hidden">
-                    <div 
-                      className="text-[100px] font-black uppercase text-gray-500/40 -rotate-45 select-none"
-                      style={{ WebkitTextStroke: '2px rgba(100, 116, 139, 0.5)' }}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[40] overflow-hidden select-none">
+                    <span 
+                      className="text-6xl font-black uppercase text-red-500/15 -rotate-45"
+                      style={{ letterSpacing: '4px' }}
                     >
                       DUPLICATE
-                    </div>
+                    </span>
                   </div>
                 )}
 
-                {/* Full-Slip Official KWSC Watermark - Spans entire print & ticket */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[35] overflow-hidden">
+                {/* Subtle Official KWSC Watermark */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10] overflow-hidden">
                   <img
                     src="/kwsc-watermark-logo.png"
                     alt="KWSC Watermark"
-                    className="w-[360px] h-[360px] object-contain opacity-[0.12] select-none filter contrast-125 print:opacity-[0.16]"
+                    className="w-72 h-72 object-contain opacity-[0.04] select-none"
                   />
                 </div>
-                {/* Header */}
-                <div className="bg-primary px-6 pt-8 pb-16 rounded-b-[40px] shadow-2xl relative overflow-hidden shrink-0">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-                  <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full -ml-10 -mb-10 blur-2xl"></div>
 
-                  <div className="relative flex justify-center items-center mb-4">
-                    <ShieldCheck className="w-10 h-10 text-emerald-400" />
+                {/* Official Government Header */}
+                <div className="bg-[#1e3a8a] text-white p-4 text-center relative shrink-0 border-b-2 border-[#1e3a8a]">
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <img 
+                      src="/kwsc-watermark-logo.png" 
+                      alt="KW&SC" 
+                      className="w-10 h-10 object-contain bg-white rounded-lg p-0.5"
+                    />
+                    <div className="text-left">
+                      <h1 className="text-xs font-black tracking-wide uppercase leading-tight text-white">
+                        Karachi Water &amp; Sewerage Corporation
+                      </h1>
+                      <p className="text-[9.5px] font-semibold text-blue-200 uppercase tracking-wider">
+                        Finance Department &bull; One Window Facilitation
+                      </p>
+                    </div>
                   </div>
-
-                  <div className="relative text-center space-y-1">
-                    <h1 className="text-white text-xl font-black tracking-tighter uppercase">Verified Tracking</h1>
-                    <p className="text-primary-foreground/70 text-[10px] font-bold uppercase tracking-widest">Karachi Water Corporation</p>
+                  <div className="inline-block bg-white text-[#1e3a8a] text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded">
+                    Official File Tracking Slip
                   </div>
                 </div>
 
-                {/* Main Content Card */}
-                <div className="px-5 -mt-10 relative z-10 shrink-0">
-                  <Card className="rounded-[30px] border-none shadow-xl overflow-hidden bg-white">
-                    <div className="p-1 bg-gradient-to-r from-emerald-500 to-primary"></div>
-                    <CardContent className="pt-6 space-y-6">
+                {/* Dual Identification Strip */}
+                <div className="grid grid-cols-2 border-b border-slate-200">
+                  <div className="p-3 text-center border-r border-slate-200 bg-blue-50/70">
+                    <span className="text-[9px] font-black text-[#1e3a8a] uppercase tracking-wider block mb-0.5">
+                      CFO Diary No
+                    </span>
+                    <p className="text-sm font-black text-slate-900 font-mono tracking-tight break-all">
+                      {qrFullScreen?.diary || '—'}
+                    </p>
+                  </div>
+                  <div className="p-3 text-center bg-emerald-50/70">
+                    <span className="text-[9px] font-black text-emerald-800 uppercase tracking-wider block mb-0.5">
+                      Receiving No
+                    </span>
+                    <p className="text-sm font-black text-slate-900 font-mono tracking-tight break-all">
+                      {qrFullScreen?.receiving || '—'}
+                    </p>
+                  </div>
+                </div>
 
-                      {/* Tracking Numbers */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-primary/5 relative group overflow-hidden">
-                          <span className="text-[9px] font-black text-primary/50 uppercase tracking-[0.1em]">CFO Diary</span>
-                          <p className="text-sm font-black text-zinc-800 font-mono mt-1 tracking-tighter">{qrFullScreen?.diary}</p>
-                        </div>
-                        <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-emerald-500/5 relative group overflow-hidden">
-                          <span className="text-[9px] font-black text-emerald-500/50 uppercase tracking-[0.1em]">Receiving No</span>
-                          <p className="text-sm font-black text-zinc-800 font-mono mt-1 tracking-tighter">{qrFullScreen?.receiving}</p>
-                        </div>
+                {/* Content Body */}
+                <div className="p-4 space-y-3.5 relative z-20 bg-white">
+                  {/* File Metadata Info Table */}
+                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2 text-xs">
+                    <div className="flex items-start justify-between gap-3 pb-2 border-b border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide shrink-0">Subject</span>
+                      <span className="font-extrabold text-slate-900 text-right leading-snug">
+                        {subjectText}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Created Date</span>
+                      <span className="font-black text-amber-700 font-mono">
+                        {safeFormatDate(qrFullScreen?.created_date)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Printed Date</span>
+                      <span className="font-black text-slate-800 font-mono">
+                        {safeFormatDate(qrFullScreen?.print_date)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Forwarded To</span>
+                      <span className="font-black text-[#1e3a8a] uppercase bg-blue-100/70 px-2 py-0.5 rounded border border-blue-200">
+                        {markToName}
+                      </span>
+                    </div>
+                    {addMarkToName && (
+                      <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Also Marked To</span>
+                        <span className="font-black text-purple-700 uppercase bg-purple-100/70 px-2 py-0.5 rounded border border-purple-200">
+                          {addMarkToName}
+                        </span>
                       </div>
+                    )}
+                  </div>
 
-                      {/* File Info */}
-                      <div className="space-y-4 pt-4 border-t border-zinc-100">
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                            <FileText className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="text-[9px] font-bold text-zinc-400 uppercase">Subject</span>
-                            <p className="text-xs font-bold text-zinc-800 leading-tight">{qrFullScreen?.subject || ticket?.subject || "Subject Details"}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
-                            <Calendar className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="text-[9px] font-bold text-zinc-400 uppercase">Created Date</span>
-                            <p className="text-xs font-black text-amber-600 tracking-tight">{safeFormatDate(qrFullScreen?.created_date)}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
-                            <Clock className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="text-[9px] font-bold text-zinc-400 uppercase">Printed Date</span>
-                            <p className="text-xs font-black text-emerald-600 tracking-tight">
-                              {safeFormatDate(qrFullScreen?.print_date)}
-                            </p>
-                          </div>
-                        </div>
-                        {qrFullScreen?.history?.filter((h: any) => (h.action === 'FORWARD' || h.action === 'FORWARDED') && h.from)?.slice(-1)[0]?.from && (
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
-                              <Building2 className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <span className="text-[9px] font-bold text-zinc-400 uppercase">Previous Section</span>
-                              <p className="text-xs font-black text-amber-600 uppercase tracking-tight">
-                                {sections.find(s => s.id === qrFullScreen.history!.filter((h: any) => (h.action === 'FORWARD' || h.action === 'FORWARDED') && h.from).slice(-1)[0].from)?.name || qrFullScreen.history!.filter((h: any) => (h.action === 'FORWARD' || h.action === 'FORWARDED') && h.from).slice(-1)[0].from}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
-                            <Building2 className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="text-[9px] font-bold text-zinc-400 uppercase">Current Section</span>
-                            <p className="text-xs font-black text-blue-600 uppercase tracking-tight">{qrFullScreen?.mark_to ? (sections.find(s => s.id === qrFullScreen.mark_to)?.name || qrFullScreen.mark_to) : (ticket?.mark_to || "CFO Office")}</p>
-                          </div>
-                        </div>
-                        {(qrFullScreen?.additional_mark_to || ticket?.additional_mark_to) && (
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 shrink-0">
-                              <Building2 className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <span className="text-[9px] font-bold text-zinc-400 uppercase">Additional Mark To</span>
-                              <p className="text-xs font-black text-purple-600 uppercase tracking-tight">{qrFullScreen?.additional_mark_to ? (sections.find(s => s.id === qrFullScreen.additional_mark_to)?.name || qrFullScreen.additional_mark_to) : (sections.find(s => s.id === ticket?.additional_mark_to)?.name || ticket?.additional_mark_to)}</p>
-                            </div>
-                          </div>
-                        )}
+                  {/* QR Code Verification Card */}
+                  <div className="bg-white rounded-xl p-3.5 border-2 border-[#1e3a8a] text-center flex items-center gap-4">
+                    <div className="p-1.5 bg-white rounded-lg border border-slate-200 shrink-0">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrFullScreen?.diary}/${qrFullScreen?.receiving}`)}&color=1e3a8a&margin=0`}
+                        alt="QR Code"
+                        className="w-24 h-24 block"
+                      />
+                    </div>
+                    <div className="text-left flex-1 min-w-0">
+                      <p className="text-[#1e3a8a] text-xs font-black uppercase tracking-wider">
+                        Scan to Track Live
+                      </p>
+                      <p className="text-slate-800 text-xs font-black font-mono tracking-tight mt-0.5 break-all">
+                        CODE: {qrFullScreen?.receiving || qrFullScreen?.diary}
+                      </p>
+                      <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wide mt-1">
+                        Prepared by Engr. Tariq Zamir
+                      </p>
+                      <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider">
+                        KW&amp;SC One Window Facilitation
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action & Override Controls (No-Print) */}
+                  <div className="no-print space-y-3 pt-2">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <Checkbox 
+                          id="duplicate-print-qr" 
+                          checked={isDuplicatePrint}
+                          onCheckedChange={(checked) => setIsDuplicatePrint(!!checked)}
+                        />
+                        <Label htmlFor="duplicate-print-qr" className="text-xs font-bold text-amber-700 cursor-pointer uppercase">
+                          Print with DUPLICATE watermark
+                        </Label>
                       </div>
-
-                      {/* QR Section */}
-                      <div className="mt-4 p-5 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-[30px] flex flex-col items-center gap-4 text-center shadow-inner print:bg-white print:border-none print:shadow-none">
-                        <div className="bg-white p-3 rounded-2xl shadow-xl border-4 border-[#0ea5e9]/20 flex flex-col items-center">
-                          <div className="relative inline-flex items-center justify-center">
-                            <img
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrFullScreen?.diary}/${qrFullScreen?.receiving}`)}&color=0ea5e9`}
-                              alt="QR"
-                              className="w-28 h-28"
-                            />
-                            {/* Central KWSC Watermark Logo */}
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <img
-                                src="/kwsc-watermark-logo.png"
-                                alt="KWSC Watermark"
-                                className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-md border-2 border-blue-900/40"
-                              />
-                            </div>
-                          </div>
-                          <span className="text-[8px] font-bold mt-2 text-zinc-600 uppercase text-center">Prepared by Engineer Tariq Zamir</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[9.5px] uppercase font-bold text-slate-600 block mb-1">Override Created Date</label>
+                          <input
+                            type="date"
+                            value={qrFullScreen?.created_date || ''}
+                            onChange={e => setQrFullScreen({ ...qrFullScreen!, created_date: e.target.value })}
+                            className="w-full h-8 text-xs bg-white border border-slate-300 text-slate-800 font-bold rounded-lg px-2 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                          />
                         </div>
                         <div>
-                          <p className="text-primary text-sm font-black uppercase tracking-widest print:text-primary">Scan to Track Live</p>
-                          <p className="text-zinc-400 text-[10px] font-medium tracking-tight mt-1 print:text-zinc-400 font-mono">CODE: {qrFullScreen?.receiving}</p>
+                          <label className="text-[9.5px] uppercase font-bold text-slate-600 block mb-1">Override Print Date</label>
+                          <input
+                            type="date"
+                            value={qrFullScreen?.print_date || ''}
+                            onChange={e => setQrFullScreen({ ...qrFullScreen!, print_date: e.target.value })}
+                            className="w-full h-8 text-xs bg-white border border-slate-300 text-slate-800 font-bold rounded-lg px-2 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                          />
                         </div>
                       </div>
+                    </div>
 
-                      <div className="pt-2 flex flex-col gap-2 justify-center">
-                        <div className="no-print space-y-2 mb-2 bg-slate-500/5 p-3 rounded-lg border border-slate-500/20">
-                          <div className="flex items-center gap-2 mb-3 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
-                            <Checkbox 
-                              id="duplicate-print-qr" 
-                              checked={isDuplicatePrint}
-                              onCheckedChange={(checked) => setIsDuplicatePrint(!!checked)}
-                            />
-                            <Label htmlFor="duplicate-print-qr" className="text-[10px] font-bold text-amber-600 cursor-pointer uppercase">Print with DUPLICATE watermark</Label>
-                          </div>
-                              <div>
-                                <label className="text-[10px] uppercase font-bold text-amber-600">Override Created Date</label>
-                                <input
-                                  type="date"
-                                  value={qrFullScreen?.created_date || ''}
-                                  onChange={e => setQrFullScreen({ ...qrFullScreen!, created_date: e.target.value })}
-                                  className="w-full h-8 text-xs bg-white border border-amber-500/30 text-amber-600 font-bold rounded-md px-2 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-[10px] uppercase font-bold text-emerald-600">Override Print Date</label>
-                                <input
-                                  type="date"
-                                  value={qrFullScreen?.print_date || ''}
-                                  onChange={e => setQrFullScreen({ ...qrFullScreen!, print_date: e.target.value })}
-                                  className="w-full h-8 text-xs bg-white border border-emerald-500/30 text-emerald-600 font-bold rounded-md px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-                                />
-                              </div>
-                        </div>
-                        <Button
-                          className={`w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl no-print`}
-                          onClick={handlePrintQR}
-                        >
-                          <Printer className="w-4 h-4 mr-2" /> Print Tracking Slip
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    <Button
+                      className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-black text-xs py-2.5 rounded-xl transition-all shadow-none flex items-center justify-center gap-2"
+                      style={{ color: '#ffffff' }}
+                      onClick={handlePrintQR}
+                    >
+                      <Printer className="w-4 h-4" style={{ color: '#ffffff' }} />
+                      <span style={{ color: '#ffffff' }}>Print Official Tracking Slip (A5)</span>
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Minimal Thermal Printer Content (QR + Diary Only) */}
