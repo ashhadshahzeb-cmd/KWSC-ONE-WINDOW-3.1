@@ -3605,10 +3605,10 @@ export default function FileTracking() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="h-8 gap-2 border-primary/20 hover:bg-primary hover:text-white transition-all"
+                                  className="h-8 gap-1.5 px-3 border border-blue-600/30 bg-blue-50/70 text-[#1e3a8a] hover:bg-[#1e3a8a] hover:text-white font-bold text-xs rounded-xl shadow-xs transition-all"
                                   onClick={() => handleProcessFile(file)}
                                 >
-                                  Review & Sign <ArrowRight className="w-3 h-3" />
+                                  <span>Review & Sign</span> <ArrowRight className="w-3.5 h-3.5" />
                                 </Button>
                                 <Button
                                   size="sm"
@@ -3757,7 +3757,7 @@ export default function FileTracking() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="h-8 gap-2 border-primary/20 hover:bg-primary hover:text-white"
+                                    className="h-8 gap-1.5 px-3 border border-blue-600/30 bg-blue-50/70 text-[#1e3a8a] hover:bg-[#1e3a8a] hover:text-white font-bold text-xs rounded-xl shadow-xs transition-all"
                                     onClick={() => {
                                       setSelectedBill({
                                         ...file,
@@ -3770,7 +3770,7 @@ export default function FileTracking() {
                                       }
                                     }}
                                   >
-                                    View Timeline <ArrowRight className="w-3 h-3" />
+                                    <span>View Timeline</span> <ArrowRight className="w-3.5 h-3.5" />
                                   </Button>
                                 </TableCell>
                               </TableRow>
@@ -4508,7 +4508,7 @@ export default function FileTracking() {
                         <Label htmlFor="duplicate-print" className="text-xs font-bold text-amber-600 cursor-pointer">Print with DUPLICATE watermark</Label>
                       </div>
                     )}
-                    <Button variant="outline" className="w-full gap-2 border-primary/20 hover:bg-primary/5 font-bold mt-2" onClick={handlePrint}>
+                    <Button variant="outline" className="w-full gap-2 border border-blue-600/30 bg-blue-50/70 text-[#1e3a8a] hover:bg-[#1e3a8a] hover:text-white font-bold mt-2 rounded-xl transition-all shadow-xs" onClick={handlePrint}>
                       <Printer className="w-4 h-4" /> Print Covering Page (Slip)
                     </Button>
                   </div>
@@ -4597,7 +4597,7 @@ export default function FileTracking() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-8 gap-2 border-primary/20 hover:bg-primary hover:text-white"
+                                      className="h-8 gap-1.5 px-3 border border-blue-600/30 bg-blue-50/70 text-[#1e3a8a] hover:bg-[#1e3a8a] hover:text-white font-bold text-xs rounded-xl shadow-xs transition-all"
                                       onClick={() => {
                                         setSelectedBill({
                                           ...file,
@@ -4609,7 +4609,7 @@ export default function FileTracking() {
                                         setCoveringSlipCreatedDate(getLocalDateString(file.created_at));
                                       }}
                                     >
-                                      View Timeline <ArrowRight className="w-3 h-3" />
+                                      <span>View Timeline</span> <ArrowRight className="w-3.5 h-3.5" />
                                     </Button>
                                   </TableCell>
                                 </TableRow>
@@ -6181,9 +6181,9 @@ export default function FileTracking() {
                               onClick={() => {
                                  setQrFullScreen({ diary: file.cfo_diary_number, receiving: file.receiving_number, print_date: file.print_date, subject: file.subject, mark_to: file.mark_to, additional_mark_to: file.additional_mark_to });
                               }}
-                              className="h-8 gap-2 border-primary/20 text-primary hover:bg-primary hover:text-[#0f1115] transition-all rounded-xl"
+                              className="h-8 gap-2 border border-blue-600/30 bg-blue-50/70 text-[#1e3a8a] hover:bg-[#1e3a8a] hover:text-white font-bold text-xs rounded-xl transition-all shadow-xs"
                             >
-                              <Printer className="w-3 h-3" /> Print QR
+                              <Printer className="w-3.5 h-3.5" /> <span>Print QR</span>
                             </Button>
                           </TableCell>
                         </TableRow>
