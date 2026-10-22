@@ -47,7 +47,7 @@ import {
   CloudOff, AlertTriangle
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react";
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -6294,7 +6294,8 @@ export default function FileTracking() {
         @media screen {
           /* Dashboard Dark Theme Overrides for Ticket Modal */
           [data-radix-portal] .bg-zinc-950, [data-radix-portal] .bg-slate-50 { background-color: #09090b !important; }
-          [data-radix-portal] .bg-white { background-color: #18181b !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+          [data-radix-portal] .bg-white:not(.qr-code-white-card):not([data-qr-white]) { background-color: #18181b !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+          [data-radix-portal] .qr-code-white-card, [data-radix-portal] [data-qr-white] { background-color: #ffffff !important; }
           [data-radix-portal] .text-zinc-800, [data-radix-portal] .text-zinc-400 { color: #f4f4f5 !important; }
           [data-radix-portal] .bg-slate-50.rounded-2xl { background-color: #27272a !important; border: 1px solid rgba(255,255,255,0.05) !important; }
           [data-radix-portal] .border-zinc-100 { border-color: rgba(255,255,255,0.05) !important; }
@@ -6558,11 +6559,11 @@ export default function FileTracking() {
 
                       {/* QR Section - Crisp High Contrast, Clean borders, 100% Scannable */}
                       <div className="mt-3 p-4 bg-slate-50 dark:bg-slate-900/80 print:bg-white rounded-2xl flex flex-col items-center gap-3 text-center border border-slate-200 dark:border-slate-700 print:border-none print:shadow-none">
-                        <div className="qr-code-white-card bg-white p-3.5 rounded-xl border-2 border-[#1e3a8a] dark:border-sky-400 print:border-[#1e3a8a] flex flex-col items-center shadow-md" style={{ backgroundColor: '#ffffff' }}>
-                          <div className="relative inline-flex items-center justify-center p-2 rounded-lg bg-white" style={{ backgroundColor: '#ffffff' }}>
-                            <QRCodeSVG
+                        <div data-qr-white className="qr-code-white-card bg-white p-3.5 rounded-xl border-2 border-[#1e3a8a] dark:border-sky-400 print:border-[#1e3a8a] flex flex-col items-center shadow-md" style={{ backgroundColor: '#ffffff' }}>
+                          <div data-qr-white className="relative inline-flex items-center justify-center p-2 rounded-lg bg-white" style={{ backgroundColor: '#ffffff' }}>
+                            <QRCodeCanvas
                               value={`${window.location.origin}/public-track/${qrFullScreen?.diary || qrFullScreen?.receiving}/${qrFullScreen?.receiving || qrFullScreen?.diary}`}
-                              size={120}
+                              size={140}
                               level="H"
                               fgColor="#000000"
                               bgColor="#ffffff"
@@ -6570,11 +6571,11 @@ export default function FileTracking() {
                                 src: "/kwsc-watermark-logo.png",
                                 x: undefined,
                                 y: undefined,
-                                height: 26,
-                                width: 26,
+                                height: 28,
+                                width: 28,
                                 excavate: true,
                               }}
-                              className="w-28 h-28"
+                              style={{ width: '120px', height: '120px', display: 'block' }}
                             />
                           </div>
                           <span className="text-[8.5px] font-black mt-2 uppercase text-center block" style={{ color: '#0f172a' }}>Prepared by Engineer Tariq Zamir</span>

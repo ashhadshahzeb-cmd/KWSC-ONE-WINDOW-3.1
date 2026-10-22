@@ -1023,20 +1023,21 @@ html.dark {
   }
 
   /* ─── 21. Barcode / QR Code Ticket Card Overrides ─── */
-  /* The QR/Barcode container card MUST be pure solid white */
-  .qr-code-white-card {
+  /* The QR/Barcode container card MUST be pure solid white in both light and dark mode */
+  .qr-code-white-card,
+  [data-qr-white] {
     background-color: #ffffff !important;
   }
   .qr-code-white-card span,
-  .qr-code-white-card p {
+  .qr-code-white-card p,
+  [data-qr-white] span,
+  [data-qr-white] p {
     color: #0f172a !important;
   }
-  /* Ensure SVG in QR code renders black modules */
-  .qr-code-white-card svg {
+  .qr-code-white-card canvas,
+  [data-qr-white] canvas {
+    display: block !important;
     background-color: #ffffff !important;
-  }
-  .qr-code-white-card svg path {
-    fill: #000000 !important;
   }
 
   /* In dark mode, ensure .qr-ticket-printable watermarks do not obstruct text */

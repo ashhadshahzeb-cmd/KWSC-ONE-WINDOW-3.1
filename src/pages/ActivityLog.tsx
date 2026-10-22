@@ -41,7 +41,7 @@ import {
   X
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppConfig } from '@/hooks/useAppConfig';
 import {
@@ -621,269 +621,11 @@ export default function ActivityLog() {
 
   const handlePrintQR = () => {
     if (!qrPrintModal) return;
-
-    const printWin = window.open('', '_blank', 'width=500,height=750');
-    if (!printWin) {
-      toast.error('Pop-up blocked! Please allow pop-ups for this site to print.');
-      return;
-    }
-
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
-      `${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`
-    )}&color=1e3a8a&margin=0`;
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Tracking Slip - ${qrPrintModal.receiving || qrPrintModal.diary}</title>
-          <style>
-            @page {
-              size: A5 portrait;
-              margin: 8mm;
-            }
-            * {
-              box-sizing: border-box;
-              margin: 0;
-              padding: 0;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            body {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-              color: #0f172a;
-              background: #ffffff;
-              padding: 10px;
-              display: flex;
-              justify-content: center;
-            }
-            img { display: block; }
-            .ticket-container {
-              width: 100%;
-              max-width: 390px;
-              border: 2px solid #1e3a8a;
-              border-radius: 20px;
-              overflow: hidden;
-              position: relative;
-              background: #ffffff;
-            }
-            .header {
-              background: #1e3a8a;
-              color: #ffffff;
-              text-align: center;
-              padding: 18px 12px 14px;
-            }
-            .header h1 {
-              font-size: 16px;
-              font-weight: 900;
-              letter-spacing: 0.5px;
-              text-transform: uppercase;
-              margin-bottom: 2px;
-            }
-            .header p {
-              font-size: 10px;
-              font-weight: 600;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-              opacity: 0.9;
-            }
-            .body {
-              padding: 16px;
-            }
-            .badge-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 8px;
-              margin-bottom: 14px;
-            }
-            .badge-box {
-              background: #f8fafc;
-              border: 1px solid #cbd5e1;
-              border-radius: 10px;
-              padding: 8px;
-              text-align: center;
-            }
-            .badge-label {
-              font-size: 8px;
-              font-weight: 800;
-              color: #1e3a8a;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              margin-bottom: 3px;
-            }
-            .badge-val {
-              font-size: 13px;
-              font-weight: 900;
-              font-family: monospace;
-              color: #0f172a;
-            }
-            .info-row {
-              display: flex;
-              flex-direction: column;
-              gap: 2px;
-              padding: 7px 0;
-              border-bottom: 1px solid #e2e8f0;
-            }
-            .info-label {
-              font-size: 8px;
-              font-weight: 700;
-              text-transform: uppercase;
-              color: #64748b;
-            }
-            .info-value {
-              font-size: 11px;
-              font-weight: 700;
-              color: #1e293b;
-              line-height: 1.3;
-            }
-            .qr-card {
-              margin-top: 14px;
-              padding: 14px;
-              background: #f8fafc;
-              border: 1px dashed #94a3b8;
-              border-radius: 16px;
-              text-align: center;
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              gap: 6px;
-            }
-            .qr-image {
-              width: 140px;
-              height: 140px;
-              border: 3px solid #1e3a8a;
-              border-radius: 12px;
-              padding: 4px;
-              background: #ffffff;
-            }
-            .qr-title {
-              font-size: 11px;
-              font-weight: 900;
-              color: #1e3a8a;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-            }
-            .qr-code {
-              font-size: 10px;
-              font-family: monospace;
-              font-weight: 700;
-              color: #475569;
-            }
-            .watermark {
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%) rotate(-35deg);
-              font-size: 60px;
-              font-weight: 900;
-              color: rgba(239, 68, 68, 0.12);
-              text-transform: uppercase;
-              pointer-events: none;
-              user-select: none;
-              white-space: nowrap;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="ticket-container">
-            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 5; overflow: hidden;">
-              <img src="/kwsc-watermark-logo.png" alt="KWSC Watermark" style="width: 300px; height: 300px; object-fit: contain; opacity: 0.22; filter: contrast(125%);" />
-            </div>
-            ${isDuplicatePrint ? '<div class="watermark">DUPLICATE</div>' : ''}
-            <div class="header">
-              <h1>Official Tracking Slip</h1>
-              <p>Karachi Water & Sewerage Corporation</p>
-            </div>
-            <div class="body">
-              <div class="badge-grid">
-                <div class="badge-box">
-                  <div class="badge-label">CFO Diary No</div>
-                  <div class="badge-val">${qrPrintModal.diary || '—'}</div>
-                </div>
-                <div class="badge-box">
-                  <div class="badge-label">Receiving No</div>
-                  <div class="badge-val">${qrPrintModal.receiving || '—'}</div>
-                </div>
-              </div>
-
-              <div class="info-row">
-                <div class="info-label">Subject / Purpose</div>
-                <div class="info-value">${qrPrintModal.subject || 'N/A'}</div>
-              </div>
-
-              <div class="info-row">
-                <div class="info-label">Created Date</div>
-                <div class="info-value">${safeFormatDate(qrPrintModal.created_date)}</div>
-              </div>
-
-              <div class="info-row">
-                <div class="info-label">Printed Date</div>
-                <div class="info-value">${safeFormatDate(qrPrintModal.print_date)}</div>
-              </div>
-
-              <div class="info-row">
-                <div class="info-label">Forwarded To Section</div>
-                <div class="info-value" style="color: #1e3a8a; font-weight: 800;">
-                  ${getSectionName(qrPrintModal.mark_to)}
-                </div>
-              </div>
-
-              ${qrPrintModal.additional_mark_to ? `
-                <div class="info-row">
-                  <div class="info-label">Additional Mark To</div>
-                  <div class="info-value" style="color: #7c3aed; font-weight: 800;">
-                    ${getSectionName(qrPrintModal.additional_mark_to)}
-                  </div>
-                </div>
-              ` : ''}
-
-              <div class="qr-card">
-                <img class="qr-image" src="${qrUrl}" alt="Barcode QR" crossorigin="anonymous" />
-                <div class="qr-title">Scan to Track Live</div>
-                <div class="qr-code">CODE: ${qrPrintModal.receiving || qrPrintModal.diary}</div>
-              </div>
-            </div>
-          </div>
-          <script>
-            function doPrint() {
-              window.print();
-              window.close();
-            }
-            window.onload = function() {
-              var imgs = document.querySelectorAll('img');
-              var total = imgs.length;
-              if (total === 0) { setTimeout(doPrint, 200); return; }
-              var loaded = 0;
-              function onLoad() {
-                loaded++;
-                if (loaded >= total) setTimeout(doPrint, 150);
-              }
-              imgs.forEach(function(img) {
-                if (img.complete && img.naturalWidth > 0) { onLoad(); }
-                else {
-                  img.onload = onLoad;
-                  img.onerror = function() {
-                    // Replace broken image with a placeholder text so print doesn't hang
-                    img.style.display = 'none';
-                    var span = document.createElement('span');
-                    span.textContent = '[QR Code Unavailable]';
-                    span.style.cssText = 'font-size:10px;color:#666;display:block;text-align:center;padding:10px;';
-                    img.parentNode.insertBefore(span, img);
-                    onLoad();
-                  };
-                }
-              });
-              // Fallback: print after 4s regardless
-              setTimeout(doPrint, 4000);
-            };
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWin.document.open();
-    printWin.document.write(htmlContent);
-    printWin.document.close();
+    setIsPrintingQR(true);
+    document.body.classList.add('printing-qr-ticket');
+    setTimeout(() => {
+      window.print();
+    }, 300);
   };
 
   useEffect(() => {
@@ -1584,11 +1326,11 @@ export default function ActivityLog() {
 
                     {/* QR Section - Crisp High Contrast, Clean borders, 100% Scannable */}
                     <div className="mt-3 p-4 bg-slate-50 dark:bg-slate-900/80 print:bg-white rounded-2xl flex flex-col items-center gap-3 text-center border border-slate-200 dark:border-slate-700 print:border-none print:shadow-none">
-                      <div className="qr-code-white-card bg-white p-3.5 rounded-xl border-2 border-[#1e3a8a] dark:border-sky-400 print:border-[#1e3a8a] flex flex-col items-center shadow-md" style={{ backgroundColor: '#ffffff' }}>
-                        <div className="relative inline-flex items-center justify-center p-2 rounded-lg bg-white" style={{ backgroundColor: '#ffffff' }}>
-                          <QRCodeSVG
+                      <div data-qr-white className="qr-code-white-card bg-white p-3.5 rounded-xl border-2 border-[#1e3a8a] dark:border-sky-400 print:border-[#1e3a8a] flex flex-col items-center shadow-md" style={{ backgroundColor: '#ffffff' }}>
+                        <div data-qr-white className="relative inline-flex items-center justify-center p-2 rounded-lg bg-white" style={{ backgroundColor: '#ffffff' }}>
+                          <QRCodeCanvas
                             value={`${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`}
-                            size={120}
+                            size={140}
                             level="H"
                             fgColor="#000000"
                             bgColor="#ffffff"
@@ -1596,11 +1338,11 @@ export default function ActivityLog() {
                               src: "/kwsc-watermark-logo.png",
                               x: undefined,
                               y: undefined,
-                              height: 26,
-                              width: 26,
+                              height: 28,
+                              width: 28,
                               excavate: true,
                             }}
-                            className="w-28 h-28"
+                            style={{ width: '120px', height: '120px', display: 'block' }}
                           />
                         </div>
                         <span className="text-[8.5px] font-black mt-2 uppercase text-center block" style={{ color: '#0f172a' }}>Prepared by Engineer Tariq Zamir</span>
@@ -1715,36 +1457,21 @@ export default function ActivityLog() {
         ${isPrintingQR ? `
           @media print {
             body * { 
-              visibility: hidden !important; 
-            }
-            .qr-ticket-printable, .qr-ticket-printable * {
               visibility: visible !important; 
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               color-adjust: exact !important;
             }
-            .qr-ticket-printable {
-              position: fixed !important;
-              left: 50% !important;
-              top: 10px !important;
-              transform: translateX(-50%) !important;
-              width: 420px !important;
-              max-width: 100% !important;
-              display: block !important;
-              background: transparent !important;
-              box-shadow: none !important;
-              border: none !important;
-              padding: 0 !important;
-              margin: 0 !important;
-            }
             .no-print { display: none !important; }
             @page { size: auto; margin: 0; }
           }
         ` : ''}
-
+        
         @media screen {
+          /* Dashboard Dark Theme Overrides for Ticket Modal */
           [data-radix-portal] .bg-zinc-950, [data-radix-portal] .bg-slate-50 { background-color: #09090b !important; }
-          [data-radix-portal] .bg-white { background-color: #18181b !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+          [data-radix-portal] .bg-white:not(.qr-code-white-card):not([data-qr-white]) { background-color: #18181b !important; border: 1px solid rgba(255,255,255,0.1) !important; }
+          [data-radix-portal] .qr-code-white-card, [data-radix-portal] [data-qr-white] { background-color: #ffffff !important; }
           [data-radix-portal] .text-zinc-800, [data-radix-portal] .text-zinc-400 { color: #f4f4f5 !important; }
           [data-radix-portal] .bg-slate-50.rounded-2xl { background-color: #27272a !important; border: 1px solid rgba(255,255,255,0.05) !important; }
           [data-radix-portal] .border-zinc-100 { border-color: rgba(255,255,255,0.05) !important; }
