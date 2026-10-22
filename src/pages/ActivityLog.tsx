@@ -41,6 +41,7 @@ import {
   X
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppConfig } from '@/hooks/useAppConfig';
 import {
@@ -1583,23 +1584,26 @@ export default function ActivityLog() {
 
                     {/* QR Section - Crisp High Contrast, Clean borders, 100% Scannable */}
                     <div className="mt-3 p-4 bg-slate-50 dark:bg-slate-900/80 print:bg-white rounded-2xl flex flex-col items-center gap-3 text-center border border-slate-200 dark:border-slate-700 print:border-none print:shadow-none">
-                      <div className="qr-code-white-card bg-white p-3 rounded-xl border-2 border-[#1e3a8a] dark:border-sky-400 print:border-[#1e3a8a] flex flex-col items-center shadow-md" style={{ backgroundColor: '#ffffff' }}>
-                        <div className="relative inline-flex items-center justify-center p-1 rounded-lg" style={{ backgroundColor: '#ffffff' }}>
-                          <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`)}&color=000000`}
-                            alt="QR"
+                      <div className="qr-code-white-card bg-white p-3.5 rounded-xl border-2 border-[#1e3a8a] dark:border-sky-400 print:border-[#1e3a8a] flex flex-col items-center shadow-md" style={{ backgroundColor: '#ffffff' }}>
+                        <div className="relative inline-flex items-center justify-center p-2 rounded-lg bg-white" style={{ backgroundColor: '#ffffff' }}>
+                          <QRCodeSVG
+                            value={`${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`}
+                            size={120}
+                            level="H"
+                            fgColor="#000000"
+                            bgColor="#ffffff"
+                            imageSettings={{
+                              src: "/kwsc-watermark-logo.png",
+                              x: undefined,
+                              y: undefined,
+                              height: 26,
+                              width: 26,
+                              excavate: true,
+                            }}
                             className="w-28 h-28"
                           />
-                          {/* Central KWSC Watermark Logo */}
-                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <img
-                              src="/kwsc-watermark-logo.png"
-                              alt="KWSC Watermark"
-                              className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-sm border border-blue-900/40"
-                            />
-                          </div>
                         </div>
-                        <span className="text-[8.5px] font-black mt-1.5 uppercase text-center" style={{ color: '#0f172a' }}>Prepared by Engineer Tariq Zamir</span>
+                        <span className="text-[8.5px] font-black mt-2 uppercase text-center block" style={{ color: '#0f172a' }}>Prepared by Engineer Tariq Zamir</span>
                       </div>
                       <div>
                         <p className="text-[#1e3a8a] dark:text-sky-300 print:text-[#1e3a8a] text-xs font-black uppercase tracking-widest">Scan to Track Live</p>

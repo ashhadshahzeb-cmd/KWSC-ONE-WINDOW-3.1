@@ -1023,23 +1023,64 @@ html.dark {
   }
 
   /* ─── 21. Barcode / QR Code Ticket Card Overrides ─── */
-  /* The QR/Barcode box MUST always be pure solid white so scanners and cameras can read it */
-  .qr-code-white-card,
-  .qr-code-white-card *,
-  [data-qr-box],
-  [data-qr-box] * {
+  /* The QR/Barcode container card MUST be pure solid white */
+  .qr-code-white-card {
     background-color: #ffffff !important;
   }
   .qr-code-white-card span,
-  .qr-code-white-card p,
-  [data-qr-box] span,
-  [data-qr-box] p {
+  .qr-code-white-card p {
     color: #0f172a !important;
+  }
+  /* Ensure SVG in QR code renders black modules */
+  .qr-code-white-card svg {
+    background-color: #ffffff !important;
+  }
+  .qr-code-white-card svg path {
+    fill: #000000 !important;
   }
 
   /* In dark mode, ensure .qr-ticket-printable watermarks do not obstruct text */
   .qr-ticket-printable img[alt*="Watermark"] {
-    opacity: 0.12 !important;
+    opacity: 0.10 !important;
+  }
+
+  /* ─── 22. Buttons & Hover Visibility in Dark Mode ─── */
+  /* Soft blue action buttons in dark mode (like View Timeline) */
+  button.bg-blue-50,
+  button[class*="bg-blue-50"] {
+    background-color: rgba(30, 58, 138, 0.45) !important;
+    border-color: rgba(59, 130, 246, 0.5) !important;
+    color: #7dd3fc !important;
+  }
+  button.bg-blue-50 *,
+  button[class*="bg-blue-50"] * {
+    color: #7dd3fc !important;
+  }
+
+  /* Button hover states: ALWAYS ensure text turns white and is 100% visible */
+  button:hover,
+  button:hover *,
+  button:hover span,
+  button:hover svg {
+    color: #ffffff !important;
+  }
+
+  button:hover.hover\:bg-\[\#1e3a8a\],
+  button:hover[class*="hover:bg-[#1e3a8a]"],
+  button:hover[class*="hover:bg-primary"],
+  button:hover[class*="hover:bg-blue-"],
+  button.bg-blue-50:hover,
+  button[class*="bg-blue-50"]:hover {
+    background-color: #1e3a8a !important;
+    color: #ffffff !important;
+  }
+  button:hover.hover\:bg-\[\#1e3a8a\] *,
+  button:hover[class*="hover:bg-[#1e3a8a]"] *,
+  button:hover[class*="hover:bg-primary"] *,
+  button:hover[class*="hover:bg-blue-"] *,
+  button.bg-blue-50:hover *,
+  button[class*="bg-blue-50"]:hover * {
+    color: #ffffff !important;
   }
 }
 
