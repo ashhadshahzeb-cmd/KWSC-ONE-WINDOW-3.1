@@ -939,11 +939,24 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
 }
 
 @media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
   body * {
     visibility: hidden;
   }
   .print-only, .print-only *,
   .qr-ticket-printable, .qr-ticket-printable * {
+    visibility: visible !important;
+  }
+  .thermal-only {
+    display: none !important;
+  }
+  body.thermal-mode .thermal-only,
+  body.thermal-mode .thermal-only * {
+    display: flex !important;
     visibility: visible !important;
   }
   .print-only {

@@ -1467,139 +1467,140 @@ export default function ActivityLog() {
       </Dialog>
 {/* Full Screen Ticket & QR Modal (Matches File Tracking Layout exactly) */}
       <Dialog open={!!qrPrintModal} onOpenChange={(open) => !open && setQrPrintModal(null)}>
-        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-[40px] border-none bg-zinc-950 shadow-2xl">
+        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-[36px] border border-slate-200 bg-white shadow-xl">
           {qrPrintModal && (
-            <div className={`w-full h-full qr-ticket-printable ${isPrintingQR ? 'overflow-visible max-h-none' : 'max-h-[90vh] overflow-y-auto'} overflow-x-hidden font-sans pb-6 relative`}>
+            <div className={`w-full h-full qr-ticket-printable bg-white print:bg-white ${isPrintingQR ? 'overflow-visible max-h-none' : 'max-h-[90vh] overflow-y-auto'} overflow-x-hidden font-sans pb-6 relative`}>
               {/* DUPLICATE Watermark for QR Ticket */}
               {isDuplicatePrint && (
-                <div className="hidden print:flex absolute inset-0 items-center justify-center pointer-events-none z-[100] overflow-hidden">
+                <div className="hidden print:flex absolute inset-0 items-center justify-center pointer-events-none z-[100] overflow-hidden select-none">
                   <div 
-                    className="text-[100px] font-black uppercase text-gray-500/40 -rotate-45 select-none"
-                    style={{ WebkitTextStroke: '2px rgba(100, 116, 139, 0.5)' }}
+                    className="text-[90px] font-black uppercase text-red-500/20 -rotate-45 select-none"
+                    style={{ WebkitTextStroke: '1.5px rgba(239, 68, 68, 0.4)' }}
                   >
                     DUPLICATE
                   </div>
                 </div>
               )}
 
-              {/* Full-Slip Official KWSC Watermark - Spans entire print & ticket */}
+              {/* Full-Slip Official KWSC Watermark - Subtle, clean opacity so it doesn't pollute text or print */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[35] overflow-hidden">
                 <img
                   src="/kwsc-watermark-logo.png"
                   alt="KWSC Watermark"
-                  className="w-[360px] h-[360px] object-contain opacity-[0.12] select-none filter contrast-125 print:opacity-[0.16]"
+                  className="w-[320px] h-[320px] object-contain opacity-[0.05] select-none print:opacity-[0.06]"
                 />
               </div>
 
-              {/* Header */}
-              <div className="bg-[#1e3a8a] px-6 pt-8 pb-16 rounded-b-[40px] shadow-2xl relative overflow-hidden shrink-0">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full -ml-10 -mb-10 blur-2xl"></div>
+              {/* Header - Solid rich Navy Blue (#1e3a8a) in print, no dirty grey smudges */}
+              <div className="bg-[#1e3a8a] print:bg-[#1e3a8a] px-6 pt-7 pb-14 rounded-b-[36px] shadow-none relative overflow-hidden shrink-0 border-b-2 border-[#1e3a8a]">
+                {/* Decorative circles - ONLY on screen, hidden on print so they don't cause dirty grey smudges! */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl print:hidden"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full -ml-10 -mb-10 blur-2xl print:hidden"></div>
 
-                <div className="relative flex justify-center items-center mb-4">
-                  <ShieldCheck className="w-10 h-10 text-emerald-400" />
+                <div className="relative flex justify-center items-center mb-3">
+                  <ShieldCheck className="w-10 h-10 text-emerald-400 print:text-emerald-400" />
                 </div>
 
                 <div className="relative text-center space-y-1">
-                  <h1 className="text-white text-xl font-black tracking-tighter uppercase">Verified Tracking</h1>
-                  <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Karachi Water Corporation</p>
+                  <h1 className="text-white print:text-white text-xl font-black tracking-tight uppercase" style={{ color: '#ffffff' }}>Verified Tracking</h1>
+                  <p className="text-blue-100 print:text-white text-[10px] font-bold uppercase tracking-widest" style={{ color: '#ffffff' }}>Karachi Water Corporation</p>
                 </div>
               </div>
 
               {/* Main Content Card */}
-              <div className="px-5 -mt-10 relative z-10 shrink-0">
-                <Card className="rounded-[30px] border-none shadow-xl overflow-hidden bg-white">
-                  <div className="p-1 bg-[#1e3a8a]"></div>
-                  <CardContent className="pt-6 space-y-6">
+              <div className="px-5 -mt-8 relative z-10 shrink-0">
+                <Card className="rounded-[28px] border border-slate-200 shadow-none overflow-hidden bg-white print:border-none print:shadow-none">
+                  <div className="p-1 bg-[#1e3a8a] print:bg-[#1e3a8a]"></div>
+                  <CardContent className="pt-5 space-y-5 print:pt-4">
 
                     {/* Tracking Numbers */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-[#1e3a8a]/20 relative group overflow-hidden">
-                        <span className="text-[9px] font-black text-[#1e3a8a] uppercase tracking-[0.1em]">CFO Diary</span>
-                        <p className="text-sm font-black text-slate-900 font-mono mt-1 tracking-tighter">{qrPrintModal.diary || '—'}</p>
+                      <div className="bg-blue-50/70 print:bg-slate-50 rounded-2xl p-3.5 text-center border-2 border-blue-200 print:border-slate-300 relative group overflow-hidden">
+                        <span className="text-[10px] font-black text-[#1e3a8a] print:text-[#1e3a8a] uppercase tracking-wider block">CFO Diary</span>
+                        <p className="text-sm font-black text-slate-900 print:text-black font-mono mt-1 tracking-tight">{qrPrintModal.diary || '—'}</p>
                       </div>
-                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-emerald-500/20 relative group overflow-hidden">
-                        <span className="text-[9px] font-black text-emerald-700 uppercase tracking-[0.1em]">Receiving No</span>
-                        <p className="text-sm font-black text-slate-900 font-mono mt-1 tracking-tighter">{qrPrintModal.receiving || '—'}</p>
+                      <div className="bg-emerald-50/70 print:bg-slate-50 rounded-2xl p-3.5 text-center border-2 border-emerald-200 print:border-slate-300 relative group overflow-hidden">
+                        <span className="text-[10px] font-black text-emerald-700 print:text-emerald-800 uppercase tracking-wider block">Receiving No</span>
+                        <p className="text-sm font-black text-slate-900 print:text-black font-mono mt-1 tracking-tight">{qrPrintModal.receiving || '—'}</p>
                       </div>
                     </div>
 
                     {/* File Info */}
-                    <div className="space-y-4 pt-4 border-t border-zinc-100">
+                    <div className="space-y-3.5 pt-3 border-t border-slate-100 print:border-slate-200">
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                          <FileText className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center shrink-0 border border-blue-100 print:border-slate-200">
+                          <FileText className="w-4 h-4 text-[#1e3a8a]" />
                         </div>
                         <div>
-                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Subject</span>
-                          <p className="text-xs font-bold text-zinc-800 leading-tight">{qrPrintModal.subject}</p>
+                          <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Subject</span>
+                          <p className="text-xs font-black text-slate-900 print:text-black leading-snug">{qrPrintModal.subject || "Subject Details"}</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
-                          <Calendar className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100 print:border-slate-200">
+                          <Calendar className="w-4 h-4 text-amber-600" />
                         </div>
                         <div>
-                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Created Date</span>
-                          <p className="text-xs font-black text-amber-600 tracking-tight">{safeFormatDate(qrPrintModal.created_date)}</p>
+                          <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Created Date</span>
+                          <p className="text-xs font-black text-amber-700 print:text-amber-800 font-mono tracking-tight">{safeFormatDate(qrPrintModal.created_date)}</p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
-                          <Clock className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 print:border-slate-200">
+                          <Clock className="w-4 h-4 text-emerald-600" />
                         </div>
                         <div>
-                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Printed Date</span>
-                          <p className="text-xs font-black text-emerald-600 tracking-tight">
+                          <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Printed Date</span>
+                          <p className="text-xs font-black text-emerald-700 print:text-emerald-800 font-mono tracking-tight">
                             {safeFormatDate(qrPrintModal.print_date)}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
-                          <Building2 className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center shrink-0 border border-blue-100 print:border-slate-200">
+                          <Building2 className="w-4 h-4 text-[#1e3a8a]" />
                         </div>
                         <div>
-                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Current Section</span>
-                          <p className="text-xs font-black text-blue-600 uppercase tracking-tight">{getSectionName(qrPrintModal.mark_to)}</p>
+                          <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Current Section</span>
+                          <p className="text-xs font-black text-[#1e3a8a] print:text-[#1e3a8a] uppercase tracking-tight">{getSectionName(qrPrintModal.mark_to)}</p>
                         </div>
                       </div>
                       {qrPrintModal.additional_mark_to && (
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 shrink-0">
-                            <Building2 className="w-4 h-4" />
+                          <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100 print:border-slate-200">
+                            <Building2 className="w-4 h-4 text-purple-600" />
                           </div>
                           <div>
-                            <span className="text-[9px] font-bold text-zinc-400 uppercase">Additional Mark To</span>
-                            <p className="text-xs font-black text-purple-600 uppercase tracking-tight">{getSectionName(qrPrintModal.additional_mark_to)}</p>
+                            <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Additional Mark To</span>
+                            <p className="text-xs font-black text-purple-700 print:text-purple-800 uppercase tracking-tight">{getSectionName(qrPrintModal.additional_mark_to)}</p>
                           </div>
                         </div>
                       )}
                     </div>
 
-                    {/* QR Section */}
-                    <div className="mt-4 p-5 bg-slate-50 border border-slate-200 rounded-[30px] flex flex-col items-center gap-4 text-center">
-                      <div className="bg-white p-3 rounded-2xl shadow-sm border-2 border-[#1e3a8a]/20 flex flex-col items-center">
+                    {/* QR Section - Crisp High Contrast Navy Blue, Clean borders */}
+                    <div className="mt-3 p-4 bg-slate-50 print:bg-white rounded-2xl flex flex-col items-center gap-3 text-center border border-slate-200 print:border-none print:shadow-none">
+                      <div className="bg-white p-2.5 rounded-xl border-2 border-[#1e3a8a] print:border-[#1e3a8a] flex flex-col items-center">
                         <div className="relative inline-flex items-center justify-center">
                           <img
                             src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`)}&color=1e3a8a`}
                             alt="QR"
                             className="w-28 h-28"
                           />
-                          {/* Centered KWSC Watermark Logo */}
+                          {/* Central KWSC Watermark Logo */}
                           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <img
                               src="/kwsc-watermark-logo.png"
                               alt="KWSC Watermark"
-                              className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-md border-2 border-[#1e3a8a]/40"
+                              className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-sm border border-blue-900/40"
                             />
                           </div>
                         </div>
-                        <span className="text-[8px] font-bold mt-2 text-slate-600 uppercase text-center">Prepared by Engineer Tariq Zamir</span>
+                        <span className="text-[8px] font-bold mt-1.5 text-slate-600 print:text-slate-800 uppercase text-center">Prepared by Engineer Tariq Zamir</span>
                       </div>
                       <div>
-                        <p className="text-[#1e3a8a] text-sm font-black uppercase tracking-widest">Scan to Track Live</p>
-                        <p className="text-slate-500 text-[10px] font-bold tracking-tight mt-1 font-mono">CODE: {qrPrintModal.receiving}</p>
+                        <p className="text-[#1e3a8a] print:text-[#1e3a8a] text-xs font-black uppercase tracking-widest">Scan to Track Live</p>
+                        <p className="text-slate-600 print:text-black text-[11px] font-bold tracking-tight mt-0.5 font-mono">CODE: {qrPrintModal.receiving}</p>
                       </div>
                     </div>
 
@@ -1633,9 +1634,9 @@ export default function ActivityLog() {
                         </div>
                       </div>
                       <Button
-                        className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold rounded-xl no-print"
-                        onClick={handlePrintQR}
+                        className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-black text-xs py-2.5 rounded-xl transition-all shadow-none flex items-center justify-center gap-2 no-print"
                         style={{ color: '#ffffff' }}
+                        onClick={handlePrintQR}
                       >
                         <Printer className="w-4 h-4 mr-2" style={{ color: '#ffffff' }} />
                         <span style={{ color: '#ffffff' }}>Print Tracking Slip</span>
