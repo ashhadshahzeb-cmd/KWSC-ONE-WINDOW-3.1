@@ -215,7 +215,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 {!collapsed && (
                   <button 
                     onClick={() => setOpenCategory(openCategory === category.id ? null : category.id)}
-                    className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black text-white uppercase tracking-wider hover:text-blue-200 transition-colors"
+                    className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black text-white uppercase tracking-wider transition-colors"
                   >
                     {category.label}
                     <motion.div
@@ -322,7 +322,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                         <div key={category.id} className="pt-4 border-t border-blue-800">
                           <button 
                             onClick={() => setOpenCategory(openCategory === category.id ? null : category.id)}
-                            className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black text-white uppercase tracking-wider hover:text-blue-200 transition-colors"
+                            className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black text-white uppercase tracking-wider transition-colors"
                           >
                             {category.label}
                             <ChevronRight className={cn("w-3.5 h-3.5 transition-transform duration-200 text-white", openCategory === category.id && "rotate-90")} />

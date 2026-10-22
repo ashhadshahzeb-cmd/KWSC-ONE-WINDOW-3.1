@@ -656,6 +656,7 @@ export default function ActivityLog() {
               display: flex;
               justify-content: center;
             }
+            img { display: block; }
             .ticket-container {
               width: 100%;
               max-width: 390px;
@@ -833,18 +834,43 @@ export default function ActivityLog() {
               ` : ''}
 
               <div class="qr-card">
-                <img class="qr-image" src="${qrUrl}" alt="Barcode QR" />
+                <img class="qr-image" src="${qrUrl}" alt="Barcode QR" crossorigin="anonymous" />
                 <div class="qr-title">Scan to Track Live</div>
                 <div class="qr-code">CODE: ${qrPrintModal.receiving || qrPrintModal.diary}</div>
               </div>
             </div>
           </div>
           <script>
+            function doPrint() {
+              window.print();
+              window.close();
+            }
             window.onload = function() {
-              setTimeout(function() {
-                window.print();
-                window.close();
-              }, 300);
+              var imgs = document.querySelectorAll('img');
+              var total = imgs.length;
+              if (total === 0) { setTimeout(doPrint, 200); return; }
+              var loaded = 0;
+              function onLoad() {
+                loaded++;
+                if (loaded >= total) setTimeout(doPrint, 150);
+              }
+              imgs.forEach(function(img) {
+                if (img.complete && img.naturalWidth > 0) { onLoad(); }
+                else {
+                  img.onload = onLoad;
+                  img.onerror = function() {
+                    // Replace broken image with a placeholder text so print doesn't hang
+                    img.style.display = 'none';
+                    var span = document.createElement('span');
+                    span.textContent = '[QR Code Unavailable]';
+                    span.style.cssText = 'font-size:10px;color:#666;display:block;text-align:center;padding:10px;';
+                    img.parentNode.insertBefore(span, img);
+                    onLoad();
+                  };
+                }
+              });
+              // Fallback: print after 4s regardless
+              setTimeout(doPrint, 4000);
             };
           </script>
         </body>

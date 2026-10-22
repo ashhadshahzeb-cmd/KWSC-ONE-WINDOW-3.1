@@ -455,8 +455,10 @@ html:not(.dark):not(.landing-dark) {
   }
 
   /* Prevent text from disappearing on hover on white background */
-  button:hover:not([class*="bg-primary"]):not([class*="bg-[#1e3a8a]"]):not([class*="bg-blue"]):not([class*="hover:bg-primary"]):not([class*="hover:bg-[#1e3a8a]"]):not([class*="hover:bg-blue-"]):not(aside *):not(.sheet-content *),
-  a:hover:not([class*="bg-primary"]):not([class*="bg-[#1e3a8a]"]):not([class*="bg-blue"]):not([class*="hover:bg-primary"]):not([class*="hover:bg-[#1e3a8a]"]):not([class*="hover:bg-blue-"]):not(aside *):not(.sheet-content *) {
+  /* NOTE: we use simple :not() selectors only (Level 3 compatible) */
+  /* Sidebar overrides below will re-correct any false positives */
+  button:hover:not([class*="bg-primary"]):not([class*="bg-[#1e3a8a]"]):not([class*="bg-blue"]):not([class*="hover:bg-primary"]):not([class*="hover:bg-[#1e3a8a]"]):not([class*="hover:bg-blue-"]),
+  a:hover:not([class*="bg-primary"]):not([class*="bg-[#1e3a8a]"]):not([class*="bg-blue"]):not([class*="hover:bg-primary"]):not([class*="hover:bg-[#1e3a8a]"]):not([class*="hover:bg-blue-"]) {
     color: #1e3a8a !important;
   }
 
@@ -505,13 +507,21 @@ html:not(.dark):not(.landing-dark) {
 
   /* Category label buttons in sidebar */
   aside button,
-  .sheet-content button {
+  aside button:hover,
+  aside button:focus,
+  aside button:active,
+  aside button *,
+  aside button:hover *,
+  .sheet-content button,
+  .sheet-content button:hover,
+  .sheet-content button:focus,
+  .sheet-content button:active,
+  .sheet-content button * {
     color: #ffffff !important;
   }
   aside button:hover,
   .sheet-content button:hover {
     background-color: rgba(255,255,255,0.15) !important;
-    color: #ffffff !important;
   }
 
   /* Logout button stays red-tinted */
