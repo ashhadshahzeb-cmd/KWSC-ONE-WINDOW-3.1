@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, PlayCircle, MonitorPlay } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,13 @@ import { Button } from '@/components/ui/button';
 
 export default function DemoVideoPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    document.documentElement.classList.add('landing-dark');
+    return () => {
+      document.documentElement.classList.remove('landing-dark');
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 selection:bg-blue-500/30 flex flex-col">

@@ -18,6 +18,13 @@ export default function LandingPage() {
   const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
+    document.documentElement.classList.add('landing-dark');
+    return () => {
+      document.documentElement.classList.remove('landing-dark');
+    };
+  }, []);
+
+  useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       if (currentScrollY > lastScrollY && currentScrollY > 80) {

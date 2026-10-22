@@ -6,18 +6,74 @@
 
 @layer base {
   :root {
-    /* Midnight Indigo & Purple - Dark Mode (Default) */
+    /* ════════════════════════════════════════
+       LIGHT THEME (Default)
+    ════════════════════════════════════════ */
+    --background: 210 30% 97%;
+    --foreground: 220 30% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 30% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 30% 12%;
+
+    /* Brand Primary: #1e3a8a (Deep Blue) */
+    --primary: 224 64% 33%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 20% 96%;
+    --secondary-foreground: 224 64% 33%;
+    --muted: 220 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 224 64% 33%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 340 82% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 224 64% 33%;
+    --radius: 1rem;
+
+    --success: 152 69% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 48%;
+    --warning-foreground: 222 30% 6%;
+    --income: 152 69% 36%;
+    --expense: 340 82% 52%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 30% 12%;
+    --sidebar-primary: 224 64% 33%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 96%;
+    --sidebar-accent-foreground: 224 64% 33%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 224 64% 33%;
+
+    --chart-1: 190 85% 38%;
+    --chart-2: 170 75% 42%;
+    --chart-3: 210 70% 50%;
+    --chart-4: 220 75% 55%;
+    --chart-5: 190 80% 40%;
+
+    --font-heading: 'Outfit', sans-serif;
+    --font-sans: 'Poppins', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  .dark {
+    /* ════════════════════════════════════════
+       DARK THEME (Toggle)
+    ════════════════════════════════════════ */
     --background: 230 35% 6%;
     --foreground: 210 40% 98%;
     --card: 230 35% 9%;
     --card-foreground: 210 40% 98%;
     --popover: 230 35% 9%;
     --popover-foreground: 210 40% 98%;
-    
-    /* Ocean Aqua / Turquoise */
+
     --primary: 190 90% 50%;
     --primary-foreground: 0 0% 10%;
-    
+
     --secondary: 200 25% 15%;
     --secondary-foreground: 190 40% 98%;
     --muted: 200 25% 15%;
@@ -29,7 +85,6 @@
     --border: 200 25% 18%;
     --input: 200 25% 18%;
     --ring: 190 90% 50%;
-    --radius: 1rem;
 
     --success: 152 69% 42%;
     --success-foreground: 0 0% 100%;
@@ -52,45 +107,545 @@
     --chart-3: 210 80% 60%;
     --chart-4: 220 85% 60%;
     --chart-5: 190 85% 50%;
-
-    --font-heading: 'Outfit', sans-serif;
-    --font-sans: 'Poppins', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
   }
 
+  /* Keep .light as an explicit alias */
   .light {
-    /* Light Mode */
-    --background: 230 20% 98%;
-    --foreground: 230 40% 10%;
+    --background: 0 0% 100%;
+    --foreground: 220 30% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 230 40% 10%;
+    --card-foreground: 220 30% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 230 40% 10%;
-    
-    /* Deep Aqua */
-    --primary: 190 85% 45%;
+    --popover-foreground: 220 30% 12%;
+    --primary: 224 64% 33%;
     --primary-foreground: 0 0% 100%;
-    
-    --secondary: 200 20% 92%;
-    --secondary-foreground: 200 40% 10%;
-    --muted: 200 20% 94%;
-    --muted-foreground: 200 15% 45%;
-    --accent: 190 85% 45%;
+    --secondary: 220 20% 96%;
+    --secondary-foreground: 224 64% 33%;
+    --muted: 220 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 224 64% 33%;
     --accent-foreground: 0 0% 100%;
     --destructive: 340 82% 52%;
     --destructive-foreground: 0 0% 100%;
-    --border: 200 20% 88%;
-    --input: 200 20% 88%;
-    --ring: 190 85% 45%;
-    
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 224 64% 33%;
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 200 40% 10%;
-    --sidebar-primary: 190 85% 45%;
+    --sidebar-foreground: 220 30% 12%;
+    --sidebar-primary: 224 64% 33%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 200 20% 94%;
-    --sidebar-accent-foreground: 200 40% 10%;
-    --sidebar-border: 200 20% 88%;
-    --sidebar-ring: 190 85% 45%;
+    --sidebar-accent: 220 20% 96%;
+    --sidebar-accent-foreground: 224 64% 33%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 224 64% 33%;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   LIGHT THEME GLOBAL OVERRIDES (Active when .dark & .landing-dark are NOT present)
+   Branding: #1e3a8a & Pure White | Completely Flat (No Gradients)
+   Landing Page is exempted (.landing-dark) to remain in its original dark theme.
+   ════════════════════════════════════════════════════════════ */
+html:not(.dark):not(.landing-dark),
+body:not(.dark):not(.landing-dark) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark):not(.landing-dark) {
+  /* ─── 1. REMOVE ALL GRADIENTS (Project Branding: Flat #1e3a8a & White) ─── */
+  [class*="bg-gradient-"],
+  [class*="bg-gradient-to-"],
+  .bg-gradient-to-r,
+  .bg-gradient-to-br,
+  .bg-gradient-to-b,
+  .bg-gradient-to-t,
+  .bg-gradient-to-tr,
+  .bg-gradient-to-bl,
+  .bg-gradient-to-l {
+    background-image: none !important;
+  }
+
+  /* Flatten gradient text into solid brand #1e3a8a */
+  .bg-clip-text {
+    background-image: none !important;
+    -webkit-background-clip: unset !important;
+    background-clip: unset !important;
+    -webkit-text-fill-color: #1e3a8a !important;
+    color: #1e3a8a !important;
+  }
+
+  /* ─── 2. Surfaces & Backgrounds (Pure White & Clean Flat Tones) ─── */
+  .bg-\[\#050505\],
+  .bg-\[\#09090b\],
+  .bg-\[\#0a0a0a\],
+  .bg-\[\#0a0a0b\],
+  .bg-\[\#0a0a0c\],
+  .bg-\[\#0B101E\],
+  .bg-\[\#0f1115\],
+  .bg-\[\#111\],
+  .bg-\[\#111318\],
+  .bg-\[\#161922\],
+  .bg-\[\#18181b\],
+  .bg-\[\#1a1a1a\],
+  .bg-\[\#1a1c23\],
+  .bg-\[\#1A2333\],
+  .bg-\[\#12131a\],
+  .bg-\[\#181920\],
+  .bg-\[\#0d0e12\],
+  .bg-\[\#000000\],
+  .bg-\[\#1e1b4b\],
+  .bg-\[\#1e293b\],
+  .bg-\[\#222\],
+  .bg-\[\#282563\],
+  .bg-\[\#312e81\],
+  .bg-black,
+  .bg-slate-950,
+  .bg-slate-900,
+  .bg-zinc-950,
+  .bg-zinc-900,
+  .bg-gray-950,
+  .bg-gray-900,
+  .bg-neutral-950,
+  .bg-neutral-900 {
+    background-color: #ffffff !important;
+  }
+
+  /* Translucent dark surfaces */
+  .bg-black\/90,
+  .bg-black\/80,
+  .bg-black\/70,
+  .bg-black\/60,
+  .bg-black\/50,
+  .bg-black\/40,
+  .bg-black\/30,
+  .bg-slate-950\/90,
+  .bg-slate-950\/80,
+  .bg-slate-900\/90,
+  .bg-slate-900\/80,
+  .bg-slate-900\/50,
+  .bg-zinc-950\/90,
+  .bg-zinc-950\/80,
+  .bg-zinc-900\/90,
+  .bg-zinc-900\/80,
+  .bg-zinc-900\/50,
+  .bg-\[\#09090b\]\/50,
+  .bg-\[\#09090b\]\/80,
+  .bg-\[\#09090b\]\/90,
+  .bg-\[\#0f1115\]\/80,
+  .bg-\[\#0f1115\]\/90,
+  .bg-\[\#111\]\/95,
+  .bg-\[\#0a0a0b\]\/90,
+  .bg-\[\#0a0a0b\]\/80,
+  .bg-\[\#0B101E\]\/90,
+  .bg-\[\#1A2333\]\/90 {
+    background-color: #ffffff !important;
+  }
+
+  .bg-black\/10,
+  .bg-black\/20 {
+    background-color: #f8fafc !important;
+  }
+
+  /* Subtle fills */
+  .bg-white\/5 {
+    background-color: #f8fafc !important;
+  }
+  .bg-white\/10 {
+    background-color: #f1f5f9 !important;
+  }
+  .bg-white\/15,
+  .bg-white\/20 {
+    background-color: #e2e8f0 !important;
+  }
+  .hover\:bg-white\/5:hover {
+    background-color: #f8fafc !important;
+  }
+  .hover\:bg-white\/10:hover {
+    background-color: #f1f5f9 !important;
+  }
+
+  /* ─── 3. BRANDING: #1e3a8a (Deep Navy Blue) ─── */
+  /* Primary buttons & brand colored solid fills */
+  .bg-primary,
+  button.bg-primary,
+  .bg-blue-600,
+  .bg-blue-700,
+  .bg-blue-800,
+  .bg-blue-900,
+  [class*="bg-blue-6"],
+  [class*="bg-blue-7"] {
+    background-color: #1e3a8a !important;
+    color: #ffffff !important;
+    border-color: #1e3a8a !important;
+  }
+
+  .hover\:bg-blue-700:hover,
+  .hover\:bg-blue-800:hover,
+  .hover\:bg-primary\/90:hover {
+    background-color: #172554 !important;
+  }
+
+  /* Brand Primary Text & Accents */
+  .text-primary,
+  .text-blue-400,
+  .text-blue-500,
+  .text-blue-600,
+  .text-blue-700 {
+    color: #1e3a8a !important;
+  }
+
+  /* Brand subtle chips, pills & outlines */
+  .bg-blue-500\/10,
+  .bg-blue-600\/10,
+  .bg-primary\/10 {
+    background-color: rgba(30, 58, 138, 0.08) !important;
+    color: #1e3a8a !important;
+  }
+  .border-blue-500\/20,
+  .border-blue-500\/30,
+  .border-primary\/20 {
+    border-color: rgba(30, 58, 138, 0.25) !important;
+  }
+
+  /* Active Navigation Links (Sidebar & Mobile Menu) — legacy bg-white/10 variant */
+  aside a[class*="bg-white/10"],
+  .sheet-content a[class*="bg-white/10"],
+  nav a[class*="bg-white/10"] {
+    background-color: rgba(255,255,255,0.15) !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  }
+  aside a[class*="bg-white/10"] svg,
+  .sheet-content a[class*="bg-white/10"] svg,
+  nav a[class*="bg-white/10"] svg {
+    color: #ffffff !important;
+  }
+  aside a[class*="bg-white/10"] span,
+  .sheet-content a[class*="bg-white/10"] span,
+  nav a[class*="bg-white/10"] span {
+    color: #ffffff !important;
+  }
+
+  /* Inactive Navigation Links — main content nav only, NOT sidebar/sheet */
+  main a:not([class*="bg-white/10"]),
+  header a:not([class*="bg-white/10"]) {
+    color: #475569 !important;
+  }
+  main a:not([class*="bg-white/10"]):hover,
+  header a:not([class*="bg-white/10"]):hover {
+    color: #1e3a8a !important;
+    background-color: rgba(30, 58, 138, 0.05) !important;
+  }
+
+  /* KWSC Buttons (Flat #1e3a8a & White) */
+  .kwsc-btn-wrapper {
+    background: #1e3a8a !important;
+    box-shadow: none !important;
+    padding: 1px !important;
+  }
+  .kwsc-btn-inner {
+    background: #1e3a8a !important;
+    color: #ffffff !important;
+  }
+  .kwsc-btn-inner::after {
+    display: none !important;
+  }
+  .kwsc-btn-wrapper:hover .kwsc-btn-inner {
+    background: #172554 !important;
+  }
+  .kwsc-btn {
+    color: #ffffff !important;
+  }
+
+  /* ─── 4. Borders (Clean Subtle Borders) ─── */
+  .border-white\/5,
+  .border-white\/10,
+  .border-white\/15,
+  .border-white\/20 {
+    border-color: #e2e8f0 !important;
+  }
+  .border-slate-700,
+  .border-slate-800,
+  .border-slate-900,
+  .border-zinc-700,
+  .border-zinc-800,
+  .border-zinc-900,
+  .border-gray-700,
+  .border-gray-800,
+  .border-gray-900,
+  .border-\[\#000\],
+  .border-\[\#000000\],
+  .border-\[\#0B101E\],
+  .border-\[\#0f1115\],
+  .border-\[\#18181b\],
+  .border-\[\#1e293b\],
+  .border-\[\#312e81\],
+  .border-\[\#334155\] {
+    border-color: #cbd5e1 !important;
+  }
+
+  /* ─── 5. Text Contrast (High Legibility) ─── */
+  /* Main text turning to deep charcoal */
+  .text-white:not([class*="bg-blue-"]):not([class*="bg-sky-"]):not([class*="bg-indigo-"]):not([class*="bg-emerald-"]):not([class*="bg-green-"]):not([class*="bg-red-"]):not([class*="bg-rose-"]):not([class*="bg-teal-"]):not([class*="bg-cyan-"]):not([class*="bg-purple-"]):not([class*="bg-violet-"]):not([class*="bg-amber-"]):not([class*="bg-orange-"]):not([class*="bg-primary"]):not(.bg-primary):not([class*="bg-\[\#1e3a8a\]"]):not([class*="bg-\[\#172554\]"]):not([class*="bg-\[\#ef4444\]"]):not([class*="bg-\[\#14b8a6\]"]),
+  .text-slate-100,
+  .text-slate-200,
+  .text-zinc-100,
+  .text-zinc-200,
+  .text-gray-100,
+  .text-gray-200 {
+    color: #0f172a !important;
+  }
+
+  .text-slate-300,
+  .text-zinc-300,
+  .text-gray-300,
+  .text-white\/90,
+  .text-white\/80 {
+    color: #1e293b !important;
+  }
+
+  .text-white\/70,
+  .text-white\/60 {
+    color: #334155 !important;
+  }
+
+  .text-white\/50,
+  .text-white\/40,
+  .text-white\/30,
+  .text-white\/20,
+  .text-slate-400,
+  .text-zinc-400,
+  .text-gray-400 {
+    color: #475569 !important;
+  }
+
+  .hover\:text-white:hover {
+    color: #0f172a !important;
+  }
+
+  /* ─── SIDEBAR & MOBILE SHEET: Force white text on #1e3a8a dark background ─── */
+  /* These rules MUST come after the global text-white override above */
+
+  /* Base: all text in aside/sheet-content is white */
+  aside,
+  aside *,
+  .sheet-content,
+  .sheet-content * {
+    color: #ffffff !important;
+  }
+
+  /* Active link: white bg + blue text */
+  aside a.bg-white,
+  aside a[class*="bg-white "],
+  aside a[class*=" bg-white"],
+  .sheet-content a.bg-white,
+  .sheet-content a[class*="bg-white "],
+  .sheet-content a[class*=" bg-white"] {
+    background-color: #ffffff !important;
+    color: #1e3a8a !important;
+  }
+  aside a.bg-white *,
+  aside a[class*="bg-white "] *,
+  aside a[class*=" bg-white"] *,
+  .sheet-content a.bg-white *,
+  .sheet-content a[class*="bg-white "] *,
+  .sheet-content a[class*=" bg-white"] * {
+    color: #1e3a8a !important;
+  }
+
+  /* Active indicator shadow */
+  aside a.shadow-md,
+  .sheet-content a.shadow-md {
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.15) !important;
+  }
+
+  /* Inactive link hover: slight white overlay */
+  aside a:not([class*="bg-white"]):hover,
+  .sheet-content a:not([class*="bg-white"]):hover {
+    background-color: rgba(255,255,255,0.15) !important;
+    color: #ffffff !important;
+  }
+
+  /* Category label buttons in sidebar */
+  aside button,
+  .sheet-content button {
+    color: #ffffff !important;
+  }
+  aside button:hover,
+  .sheet-content button:hover {
+    background-color: rgba(255,255,255,0.15) !important;
+    color: #ffffff !important;
+  }
+
+  /* Logout button stays red-tinted */
+  aside button[class*="text-red"],
+  .sheet-content button[class*="text-red"] {
+    color: #fecaca !important;
+  }
+  aside button[class*="text-red"]:hover,
+  .sheet-content button[class*="text-red"]:hover {
+    background-color: rgba(239,68,68,0.25) !important;
+    color: #ffffff !important;
+  }
+
+  /* SVG icons in sidebar */
+  aside svg,
+  .sheet-content svg {
+    color: inherit !important;
+  }
+
+  /* Scrollbar in sidebar should not get text-white override */
+  aside [data-radix-scroll-area-viewport],
+  .sheet-content [data-radix-scroll-area-viewport] {
+    color: #ffffff !important;
+  }
+
+  /* ─── Auth Page & Blue Containers: Right brand panel with bg-[#1e3a8a] keeps white text ─── */
+  .bg-\[\#1e3a8a\],
+  .bg-\[\#1e3a8a\] * {
+    color: #ffffff;
+  }
+  .bg-\[\#1e3a8a\] .text-blue-100 {
+    color: #dbeafe !important;
+  }
+  .bg-\[\#1e3a8a\] .text-blue-200 {
+    color: #bfdbfe !important;
+  }
+  .bg-\[\#1e3a8a\] .text-blue-300 {
+    color: #93c5fd !important;
+  }
+  .bg-\[\#1e3a8a\] .text-white,
+  .bg-\[\#1e3a8a\] h1,
+  .bg-\[\#1e3a8a\] h2,
+  .bg-\[\#1e3a8a\] h3,
+  .bg-\[\#1e3a8a\] h4,
+  .bg-\[\#1e3a8a\] span,
+  .bg-\[\#1e3a8a\] svg {
+    color: #ffffff !important;
+  }
+
+  /* Keep text-white WHITE when on a solid colored button or badge */
+  button[class*="bg-blue-"] .text-white,
+  button[class*="bg-blue-"],
+  button[class*="bg-\[\#1e3a8a\]"],
+  button[class*="bg-\[\#1e3a8a\]"] *,
+  button[class*="bg-primary"],
+  button.bg-primary,
+  .bg-\[\#1e3a8a\],
+  button[class*="bg-sky-"] .text-white,
+  button[class*="bg-indigo-"] .text-white,
+  button[class*="bg-emerald-"] .text-white,
+  button[class*="bg-green-"] .text-white,
+  button[class*="bg-red-"] .text-white,
+  button[class*="bg-rose-"] .text-white,
+  button[class*="bg-teal-"] .text-white,
+  button[class*="bg-cyan-"] .text-white,
+  button[class*="bg-purple-"] .text-white,
+  button[class*="bg-violet-"] .text-white,
+  button[class*="bg-amber-"] .text-white,
+  button[class*="bg-orange-"] .text-white,
+  button[class*="bg-primary"] .text-white,
+  button.bg-primary .text-white,
+  .bg-primary .text-white,
+  .bg-destructive .text-white,
+  [class*="bg-blue-6"] .text-white,
+  [class*="bg-blue-7"] .text-white,
+  [class*="bg-sky-5"] .text-white,
+  [class*="bg-sky-6"] .text-white,
+  [class*="bg-emerald-6"] .text-white,
+  [class*="bg-red-5"] .text-white,
+  [class*="bg-rose-5"] .text-white,
+  [class*="bg-rose-6"] .text-white,
+  [class*="bg-teal-6"] .text-white,
+  [class*="bg-violet-6"] .text-white,
+  [class*="bg-amber-5"] .text-white,
+  [class*="bg-amber-6"] .text-white,
+  [class*="bg-orange-5"] .text-white,
+  [class*="bg-orange-6"] .text-white,
+  [class*="bg-\[\#ef4444\]"] .text-white,
+  [class*="bg-\[\#14b8a6\]"] .text-white,
+  .badge[class*="bg-"] .text-white {
+    color: #ffffff !important;
+  }
+
+  /* ─── 6. Modals, Dialogs, Dropdowns, Cards ─── */
+  [role="dialog"]:not([class*="bg-[#1e3a8a]"]),
+  [data-radix-popper-content-wrapper] > div {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.02) !important;
+  }
+  /* Mobile sheet: only apply white bg to non-sidebar sheets */
+  .sheet-content:not([class*="bg-[#1e3a8a]"]) {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.02) !important;
+  }
+  /* Sidebar mobile sheet keeps blue bg + white text */
+  [role="dialog"][class*="bg-[#1e3a8a]"],
+  [role="dialog"][class*="bg-[#1e3a8a]"] *,
+  .sheet-content[class*="bg-[#1e3a8a]"],
+  .sheet-content[class*="bg-[#1e3a8a]"] * {
+    color: #ffffff !important;
+  }
+  [role="dialog"][class*="bg-[#1e3a8a]"] a.bg-white,
+  [role="dialog"][class*="bg-[#1e3a8a]"] a.bg-white *,
+  [role="dialog"][class*="bg-[#1e3a8a]"] a[class*="bg-white "],
+  [role="dialog"][class*="bg-[#1e3a8a]"] a[class*="bg-white "] *,
+  [role="dialog"][class*="bg-[#1e3a8a]"] a[class*=" bg-white"],
+  [role="dialog"][class*="bg-[#1e3a8a]"] a[class*=" bg-white"] *,
+  .sheet-content[class*="bg-[#1e3a8a]"] a.bg-white,
+  .sheet-content[class*="bg-[#1e3a8a]"] a.bg-white *,
+  .sheet-content[class*="bg-[#1e3a8a]"] a[class*="bg-white "],
+  .sheet-content[class*="bg-[#1e3a8a]"] a[class*="bg-white "] *,
+  .sheet-content[class*="bg-[#1e3a8a]"] a[class*=" bg-white"],
+  .sheet-content[class*="bg-[#1e3a8a]"] a[class*=" bg-white"] * {
+    color: #1e3a8a !important;
+  }
+
+  .glass-card {
+    background-color: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Form inputs & textareas */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),
+  textarea {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: #64748b !important;
+  }
+
+  /* Select dropdowns */
+  select {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Tables */
+  table {
+    color: #0f172a !important;
+  }
+  thead tr {
+    background-color: #f8fafc !important;
+    color: #1e293b !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+  }
+  tbody tr {
+    border-color: #e2e8f0 !important;
+  }
+  tbody tr:hover {
+    background-color: #f1f5f9 !important;
   }
 }
 
@@ -186,12 +741,16 @@
     box-shadow: 0 0 22px hsl(var(--primary) / 0.6), 0 0 8px hsl(var(--primary) / 0.4);
   }
   .kwsc-btn-inner {
-    background: hsl(220 40% 10%) !important;
+    background: hsl(var(--card)) !important;
     border-radius: calc(var(--radius) - 1.5px) !important;
     transition: background 0.3s ease;
-    color: #ffffff !important;
+    color: hsl(var(--foreground)) !important;
     overflow: hidden;
     position: relative;
+  }
+  .dark .kwsc-btn-inner {
+    background: hsl(220 40% 10%) !important;
+    color: #ffffff !important;
   }
   .kwsc-btn-inner::after {
     content: '';
@@ -205,10 +764,13 @@
     pointer-events: none;
   }
   .kwsc-btn-wrapper:hover .kwsc-btn-inner {
-    background: hsl(var(--primary) / 0.2) !important;
+    background: hsl(var(--primary) / 0.15) !important;
   }
   .kwsc-btn {
     background: transparent;
+    color: hsl(var(--foreground)) !important;
+  }
+  .dark .kwsc-btn {
     color: #ffffff !important;
   }
 
@@ -338,7 +900,7 @@
   100% { opacity: 1; transform: translateY(0)    scale(1);   }
 }
 
-/* ─── Date Input: White Calendar Icon for Dark Theme ─── */
+/* ─── Date Input: Calendar Icon ─── */
 input[type="date"] {
   position: relative;
 }
@@ -350,10 +912,13 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   bottom: 0;
   width: 100%;
   height: 100%;
-  filter: invert(1) brightness(2);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s;
+}
+/* In dark mode only, invert the icon to make it white */
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(2);
 }
 input[type="date"]:hover::-webkit-calendar-picker-indicator {
   opacity: 0;

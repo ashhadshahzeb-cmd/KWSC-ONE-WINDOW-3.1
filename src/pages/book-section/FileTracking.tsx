@@ -76,6 +76,7 @@ import { useSyncManager } from "@/hooks/useSyncManager";
 import Fuse from "fuse.js";
 import { Highlight } from "@/components/ui/Highlight";
 import { CommandPalette } from "@/components/CommandPalette";
+import DailyCategoryReportModal from "@/components/DailyCategoryReportModal";
 
 const getSubCatLabel = (val: string | null) => {
   if (!val) return "---";
@@ -272,11 +273,12 @@ export default function FileTracking() {
   const [isPendingFilesLoading, setIsPendingFilesLoading] = useState(false);
 
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [reportDateFilter, setReportDateFilter] = useState((currentRole === 'super_admin' || currentRole === 'entry_operator') ? "all" : "today");
+  const [reportDateFilter, setReportDateFilter] = useState("all");
+  const [isDailyCategoryReportOpen, setIsDailyCategoryReportOpen] = useState(false);
   
   useEffect(() => {
     if (currentRole) {
-      if (currentRole !== 'super_admin' && currentRole !== 'entry_operator') {
+      if (false) {
         setReportDateFilter("today");
       } else {
         setReportDateFilter("all");
@@ -1797,49 +1799,89 @@ export default function FileTracking() {
       if (filterAmount === 'above_2_lac') mapped = mapped.filter(r => (r.amount || 0) > 200000);
       if (filterAmount === 'below_2_lac') mapped = mapped.filter(r => (r.amount || 0) <= 200000);
 
-      // 3. Search Filter (Fuzzy Search with Fuse.js)
+      // 3. Search Filter (Comprehensive Multi-Field Search)
       if (debouncedSearchQuery) {
-        const q = debouncedSearchQuery.trim();
-        const fuse = new Fuse(mapped, {
-          keys: ['subject', 'cfo_diary_number', 'receiving_number', 'received_from', 'tracking_id', 'handover_person_name'],
-          threshold: 0.5,
-          ignoreLocation: true,
-          minMatchCharLength: 2
+        const q = debouncedSearchQuery.trim().toLowerCase();
+        mapped = mapped.filter((r: any) => {
+          const diary = (r.cfo_diary_number || '').toLowerCase();
+          const recv = (r.receiving_number || '').toLowerCase();
+          const subj = (r.subject || '').toLowerCase();
+          const from = (r.received_from || '').toLowerCase();
+          const track = (r.tracking_id || '').toLowerCase();
+          const handover = (r.handover_person_name || '').toLowerCase();
+          const empNo = (r.employee_number || r.emp_no || '').toLowerCase();
+          const empName = (r.emp_name || r.party_name || '').toLowerCase();
+          const voucher = (r.voucher_code || '').toLowerCase();
+          const vehicle = (r.vehicle_no || '').toLowerCase();
+          const purpose = (r.file_purpose || '').toLowerCase();
+          const remarks = (r.remarks || '').toLowerCase();
+          const cat = (r.mainCategory || r.main_category || '').toLowerCase();
+          const subCat = (r.subCategory || r.sub_category || '').toLowerCase();
+          const markTo = (r.mark_to || '').toLowerCase();
+          const amountStr = String(r.amount || '');
+
+          return (
+            diary.includes(q) ||
+            recv.includes(q) ||
+            subj.includes(q) ||
+            from.includes(q) ||
+            track.includes(q) ||
+            handover.includes(q) ||
+            empNo.includes(q) ||
+            empName.includes(q) ||
+            voucher.includes(q) ||
+            vehicle.includes(q) ||
+            purpose.includes(q) ||
+            remarks.includes(q) ||
+            cat.includes(q) ||
+            subCat.includes(q) ||
+            markTo.includes(q) ||
+            amountStr.includes(q)
+          );
         });
-        mapped = fuse.search(q).map(result => result.item);
       }
 
-      // 4. Date Filter
+      // 4. Date Filter (Robust Local Calendar Comparison)
       if (reportDateFilter !== 'all') {
         const now = new Date();
         let startDate: Date | null = null;
         let endDate: Date | null = null;
 
         if (reportDateFilter === 'today' || reportDateFilter === 'daily') {
-          startDate = new Date(now.setHours(0, 0, 0, 0));
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        } else if (reportDateFilter === 'yesterday') {
+          const yest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          startDate = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 0, 0, 0, 0);
+          endDate = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 23, 59, 59, 999);
         } else if (reportDateFilter === 'weekly') {
-          startDate = new Date(now.setDate(now.getDate() - 7));
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date();
         } else if (reportDateFilter === 'monthly') {
-          startDate = new Date(now.setMonth(now.getMonth() - 1));
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+          endDate = new Date();
         } else if (reportDateFilter === 'yearly') {
-          startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+          startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+          endDate = new Date();
         } else if (reportDateFilter === 'custom') {
           if (customFilterStartDate) {
-            startDate = new Date(customFilterStartDate);
-            startDate.setHours(0, 0, 0, 0);
+            const [y, m, d] = customFilterStartDate.split('-').map(Number);
+            startDate = new Date(y, m - 1, d, 0, 0, 0, 0);
           }
           if (customFilterEndDate) {
-            endDate = new Date(customFilterEndDate);
-            endDate.setHours(23, 59, 59, 999);
+            const [y, m, d] = customFilterEndDate.split('-').map(Number);
+            endDate = new Date(y, m - 1, d, 23, 59, 59, 999);
           }
         }
 
-        if (startDate) {
-          mapped = mapped.filter((r: any) => new Date(r.created_at || new Date()) >= startDate!);
-        }
-        if (endDate) {
-          mapped = mapped.filter((r: any) => new Date(r.created_at || new Date()) <= endDate!);
-        }
+        mapped = mapped.filter((r: any) => {
+          const rDate = r.created_at ? new Date(r.created_at) : (r.inward_date ? new Date(r.inward_date) : null);
+          if (!rDate || isNaN(rDate.getTime())) return false;
+          if (startDate && rDate < startDate) return false;
+          if (endDate && rDate > endDate) return false;
+          return true;
+        });
       }
 
       return mapped;
@@ -1948,21 +1990,27 @@ export default function FileTracking() {
         let endDate: Date | null = null;
 
         if (reportDateFilter === 'today' || reportDateFilter === 'daily') {
-          startDate = new Date(now.setHours(0, 0, 0, 0));
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        } else if (reportDateFilter === 'yesterday') {
+          const yest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          startDate = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 0, 0, 0, 0);
+          endDate = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 23, 59, 59, 999);
         } else if (reportDateFilter === 'weekly') {
-          startDate = new Date(now.setDate(now.getDate() - 7));
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          startDate.setHours(0, 0, 0, 0);
         } else if (reportDateFilter === 'monthly') {
-          startDate = new Date(now.setMonth(now.getMonth() - 1));
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
         } else if (reportDateFilter === 'yearly') {
-          startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+          startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
         } else if (reportDateFilter === 'custom') {
           if (customFilterStartDate) {
-            startDate = new Date(customFilterStartDate);
-            startDate.setHours(0, 0, 0, 0);
+            const [y, m, d] = customFilterStartDate.split('-').map(Number);
+            startDate = new Date(y, m - 1, d, 0, 0, 0, 0);
           }
           if (customFilterEndDate) {
-            endDate = new Date(customFilterEndDate);
-            endDate.setHours(23, 59, 59, 999);
+            const [y, m, d] = customFilterEndDate.split('-').map(Number);
+            endDate = new Date(y, m - 1, d, 23, 59, 59, 999);
           }
         }
 
@@ -1977,7 +2025,7 @@ export default function FileTracking() {
       // Apply Search filter
       if (debouncedSearchQuery) {
         const q = `%${debouncedSearchQuery.toLowerCase()}%`;
-        query = query.or(`cfo_diary_number.ilike.${q},receiving_number.ilike.${q},subject.ilike.${q},received_from.ilike.${q},tracking_id.ilike.${q},handover_person_name.ilike.${q}`);
+        query = query.or(`cfo_diary_number.ilike.${q},receiving_number.ilike.${q},subject.ilike.${q},received_from.ilike.${q},tracking_id.ilike.${q},handover_person_name.ilike.${q},employee_number.ilike.${q},voucher_code.ilike.${q},vehicle_no.ilike.${q},file_purpose.ilike.${q}`);
       }
 
       // 1. Build the paginated query
@@ -2060,21 +2108,27 @@ export default function FileTracking() {
         let endDate: Date | null = null;
 
         if (reportDateFilter === 'today' || reportDateFilter === 'daily') {
-          startDate = new Date(now.setHours(0, 0, 0, 0));
+          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        } else if (reportDateFilter === 'yesterday') {
+          const yest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          startDate = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 0, 0, 0, 0);
+          endDate = new Date(yest.getFullYear(), yest.getMonth(), yest.getDate(), 23, 59, 59, 999);
         } else if (reportDateFilter === 'weekly') {
-          startDate = new Date(now.setDate(now.getDate() - 7));
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          startDate.setHours(0, 0, 0, 0);
         } else if (reportDateFilter === 'monthly') {
-          startDate = new Date(now.setMonth(now.getMonth() - 1));
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
         } else if (reportDateFilter === 'yearly') {
-          startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+          startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
         } else if (reportDateFilter === 'custom') {
           if (customFilterStartDate) {
-            startDate = new Date(customFilterStartDate);
-            startDate.setHours(0, 0, 0, 0);
+            const [y, m, d] = customFilterStartDate.split('-').map(Number);
+            startDate = new Date(y, m - 1, d, 0, 0, 0, 0);
           }
           if (customFilterEndDate) {
-            endDate = new Date(customFilterEndDate);
-            endDate.setHours(23, 59, 59, 999);
+            const [y, m, d] = customFilterEndDate.split('-').map(Number);
+            endDate = new Date(y, m - 1, d, 23, 59, 59, 999);
           }
         }
 
@@ -2088,7 +2142,7 @@ export default function FileTracking() {
 
       if (debouncedSearchQuery) {
         const q = `%${debouncedSearchQuery.toLowerCase()}%`;
-        allQuery = allQuery.or(`cfo_diary_number.ilike.${q},receiving_number.ilike.${q},subject.ilike.${q},received_from.ilike.${q},tracking_id.ilike.${q},handover_person_name.ilike.${q}`);
+        allQuery = allQuery.or(`cfo_diary_number.ilike.${q},receiving_number.ilike.${q},subject.ilike.${q},received_from.ilike.${q},tracking_id.ilike.${q},handover_person_name.ilike.${q},employee_number.ilike.${q},voucher_code.ilike.${q},vehicle_no.ilike.${q},file_purpose.ilike.${q}`);
       }
 
       const allQueryPromise = allQuery.order('created_at', { ascending: sortOrder === 'asc' });
@@ -3104,26 +3158,50 @@ export default function FileTracking() {
           <div className="flex flex-wrap items-center gap-2">
             {/* Global Search for My Tray, Timeline, Reports */}
             {activeTab !== 'track' && activeTab !== 'register' && (
-              <div className="relative shrink-0">
+              <div className="relative shrink-0 flex items-center">
                 <Input
-                  placeholder="Quick Search..."
+                  placeholder="Search Diary, Ref, Subject, Emp#, Amount..."
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-[180px] h-9 text-xs bg-muted/20 border-border/50 pl-8 focus-visible:ring-primary/50"
+                  onChange={e => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(0);
+                  }}
+                  className="w-[200px] sm:w-[260px] h-10 text-xs bg-white border-slate-300 pl-8 pr-7 text-slate-800 focus-visible:ring-[#1e3a8a] rounded-xl shadow-sm"
                 />
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[#1e3a8a]" />
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setCurrentPage(0);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 font-bold text-sm"
+                    title="Clear Search"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             )}
+
+            {/* Daily Category Report Button */}
+            <Button
+              onClick={() => setIsDailyCategoryReportOpen(true)}
+              className="h-10 px-3.5 bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold text-xs gap-1.5 rounded-xl shadow-sm shrink-0 transition-transform active:scale-95"
+            >
+              <Calendar className="w-4 h-4 text-white" />
+              Daily Category Report
+            </Button>
 
             <Select value={filterCategory} onValueChange={(v) => {
               setFilterCategory(v);
               setFilterSubCategory("all"); // Reset subcategory when category changes
               setCurrentPage(0);
             }}>
-              <SelectTrigger className="w-[140px] h-10 text-xs bg-[#0f1115] border-white/5 text-white/70 hover:text-white transition-all rounded-xl shrink-0">
+              <SelectTrigger className="w-[145px] h-10 text-xs bg-white border-slate-300 text-slate-800 hover:border-[#1e3a8a] transition-all rounded-xl shrink-0 shadow-sm font-semibold">
                 <SelectValue placeholder="Category View" />
               </SelectTrigger>
-              <SelectContent className="bg-[#0f1115] border-white/10 text-white/70">
+              <SelectContent className="bg-white border-slate-200 text-slate-800 shadow-xl">
                 <SelectItem value="all">All Categories</SelectItem>
                 {dynMainCats.map(mc => (
                   <SelectItem key={mc.config_key} value={mc.config_key}>{mc.config_label}</SelectItem>
@@ -3135,7 +3213,7 @@ export default function FileTracking() {
               setFilterSubCategory(v);
               setCurrentPage(0);
             }}>
-              <SelectTrigger className="w-[155px] h-10 text-xs bg-[#0f1115] border-white/5 text-white/70 hover:text-white transition-all rounded-xl shrink-0">
+              <SelectTrigger className="w-[155px] h-10 text-xs bg-white border-slate-300 text-slate-800 hover:border-[#1e3a8a] transition-all rounded-xl shrink-0 shadow-sm font-semibold">
                 <SelectValue placeholder="Sub Category">
                   {filterSubCategory === 'all'
                     ? (filterCategory !== 'all'
@@ -3145,7 +3223,7 @@ export default function FileTracking() {
                   }
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-[#0f1115] border-white/10 text-white/70">
+              <SelectContent className="bg-white border-slate-200 text-slate-800 shadow-xl">
                 <SelectItem value="all">
                   {filterCategory !== 'all'
                     ? `All ${filterCategory === 'pol_bills' ? 'POL Bills' : filterCategory.charAt(0).toUpperCase() + filterCategory.slice(1)} Sub-Categories`
@@ -3165,10 +3243,10 @@ export default function FileTracking() {
               setFilterSection(v);
               setCurrentPage(0);
             }}>
-              <SelectTrigger className="w-[140px] h-10 text-xs bg-[#0f1115] border-white/5 text-white/70 hover:text-white transition-all rounded-xl shrink-0">
+              <SelectTrigger className="w-[140px] h-10 text-xs bg-white border-slate-300 text-slate-800 hover:border-[#1e3a8a] transition-all rounded-xl shrink-0 shadow-sm font-semibold">
                 <SelectValue placeholder="Section View" />
               </SelectTrigger>
-              <SelectContent className="bg-[#0f1115] border-white/10 text-white/70">
+              <SelectContent className="bg-white border-slate-200 text-slate-800 shadow-xl">
                 <SelectItem value="all">All Sections</SelectItem>
                 {sections.map((s) => (
                   <SelectItem key={s.id} value={s.id} className="text-xs font-bold uppercase tracking-tight py-2.5">
@@ -3182,63 +3260,85 @@ export default function FileTracking() {
               setFilterAmount(v);
               setCurrentPage(0);
             }}>
-              <SelectTrigger className="w-[140px] h-10 text-xs bg-[#0f1115] border-white/5 text-white/70 hover:text-white transition-all rounded-xl shrink-0">
+              <SelectTrigger className="w-[135px] h-10 text-xs bg-white border-slate-300 text-slate-800 hover:border-[#1e3a8a] transition-all rounded-xl shrink-0 shadow-sm font-semibold">
                 <SelectValue placeholder="Amount View" />
               </SelectTrigger>
-              <SelectContent className="bg-[#0f1115] border-white/10 text-white/70">
+              <SelectContent className="bg-white border-slate-200 text-slate-800 shadow-xl">
                 <SelectItem value="all">All Amounts</SelectItem>
                 <SelectItem value="above_2_lac">&gt; 2 Lac</SelectItem>
                 <SelectItem value="below_2_lac">&le; 2 Lac</SelectItem>
               </SelectContent>
             </Select>
 
+            {/* Date Range Filter (Visible for all users) */}
             <div className="flex items-center gap-2">
-              {(currentRole === 'super_admin' || currentRole === 'entry_operator') && (
-                <>
-                  <Select value={reportDateFilter} onValueChange={(v) => {
-                    setReportDateFilter(v);
-                    setCurrentPage(0);
-                  }}>
-                    <SelectTrigger className="w-[150px] h-10 text-xs bg-[#0f1115] border-white/5 text-white/70 hover:text-white transition-all rounded-xl shrink-0">
-                      <SelectValue placeholder="Date Range" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-[#0f1115] border-white/10 text-white/70">
-                      <SelectItem value="all">All Time Records</SelectItem>
-                      <SelectItem value="today">Daily Report (Today)</SelectItem>
-                      <SelectItem value="weekly">Weekly Summary</SelectItem>
-                      <SelectItem value="monthly">Monthly Audit</SelectItem>
-                      <SelectItem value="yearly">Yearly Overview</SelectItem>
-                      <SelectItem value="custom">Specific Date</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <Select value={reportDateFilter} onValueChange={(v) => {
+                setReportDateFilter(v);
+                setCurrentPage(0);
+              }}>
+                <SelectTrigger className="w-[155px] h-10 text-xs bg-white border-slate-300 text-slate-800 hover:border-[#1e3a8a] transition-all rounded-xl shrink-0 shadow-sm font-semibold">
+                  <SelectValue placeholder="Date Range" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-slate-200 text-slate-800 shadow-xl">
+                  <SelectItem value="all">All Time Records</SelectItem>
+                  <SelectItem value="today">Daily Report (Today)</SelectItem>
+                  <SelectItem value="yesterday">Yesterday</SelectItem>
+                  <SelectItem value="weekly">Last 7 Days</SelectItem>
+                  <SelectItem value="monthly">This Month</SelectItem>
+                  <SelectItem value="yearly">This Year</SelectItem>
+                  <SelectItem value="custom">Specific / Custom Date</SelectItem>
+                </SelectContent>
+              </Select>
 
-                  {reportDateFilter === 'custom' && (
-                    <div className="flex items-center gap-2 animate-in slide-in-from-left-2 duration-300">
-                      <span className="text-[10px] uppercase font-black text-white/40 tracking-wider">From</span>
-                      <Input
-                        type="date"
-                        value={customFilterStartDate}
-                        onChange={(e) => {
-                          setCustomFilterStartDate(e.target.value);
-                          setCurrentPage(0);
-                        }}
-                        className="h-10 text-xs bg-[#0f1115] border-white/5 text-white/70"
-                      />
-                      <span className="text-[10px] uppercase font-black text-white/40 tracking-wider">To</span>
-                      <Input
-                        type="date"
-                        value={customFilterEndDate}
-                        onChange={(e) => {
-                          setCustomFilterEndDate(e.target.value);
-                          setCurrentPage(0);
-                        }}
-                        className="h-10 text-xs bg-[#0f1115] border-white/5 text-white/70"
-                      />
-                    </div>
-                  )}
-                </>
+              {reportDateFilter === 'custom' && (
+                <div className="flex items-center gap-1.5 animate-in slide-in-from-left-2 duration-300">
+                  <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">From</span>
+                  <Input
+                    type="date"
+                    value={customFilterStartDate}
+                    onChange={(e) => {
+                      setCustomFilterStartDate(e.target.value);
+                      setCurrentPage(0);
+                    }}
+                    className="h-10 text-xs bg-white border-slate-300 text-slate-800 w-[130px] rounded-xl"
+                  />
+                  <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">To</span>
+                  <Input
+                    type="date"
+                    value={customFilterEndDate}
+                    onChange={(e) => {
+                      setCustomFilterEndDate(e.target.value);
+                      setCurrentPage(0);
+                    }}
+                    className="h-10 text-xs bg-white border-slate-300 text-slate-800 w-[130px] rounded-xl"
+                  />
+                </div>
               )}
             </div>
+
+            {/* Reset Filters Button */}
+            {(filterCategory !== 'all' || filterSubCategory !== 'all' || filterSection !== 'all' || filterAmount !== 'all' || reportDateFilter !== 'all' || searchQuery) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchQuery("");
+                  setFilterCategory("all");
+                  setFilterSubCategory("all");
+                  setFilterSection("all");
+                  setFilterAmount("all");
+                  setReportDateFilter("all");
+                  setCustomFilterStartDate("");
+                  setCustomFilterEndDate("");
+                  setCurrentPage(0);
+                }}
+                className="h-10 px-3 text-xs border-red-200 bg-red-50 text-red-600 hover:bg-red-100 font-bold rounded-xl shrink-0 gap-1"
+                title="Reset all active filters"
+              >
+                <ResetIcon className="w-3.5 h-3.5" />
+                Reset Filters
+              </Button>
+            )}
 
             <Select value={sortOrder} onValueChange={(v: "desc" | "asc") => setSortOrder(v)}>
               <SelectTrigger className="w-[130px] h-10 text-xs bg-[#0f1115] border-white/5 text-white/70 hover:text-white transition-all rounded-xl shrink-0">
@@ -3761,50 +3861,55 @@ export default function FileTracking() {
                 <p className="text-sm text-muted-foreground mt-1">Exportable summaries for audits and status monitoring</p>
               </div>
               <div className="flex items-center gap-2">
-                {(currentRole === 'super_admin' || currentRole === 'entry_operator') && (
-                  <>
-                    <Select value={reportDateFilter} onValueChange={(v) => {
-                       setReportDateFilter(v);
-                       setCurrentPage(0);
-                     }}>
-                      <SelectTrigger className="w-[150px] h-9 bg-[#0f1115] border-white/5 text-xs text-white/70 hover:text-white rounded-xl">
-                        <SelectValue placeholder="Date Range" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-[#0f1115] border-white/10 text-white/70">
-                        <SelectItem value="all">All Time Records</SelectItem>
-                        <SelectItem value="today">Daily Report (Today)</SelectItem>
-                        <SelectItem value="weekly">Weekly Summary</SelectItem>
-                        <SelectItem value="monthly">Monthly Audit</SelectItem>
-                        <SelectItem value="yearly">Yearly Overview</SelectItem>
-                        <SelectItem value="custom">Specific Date</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <Button
+                  onClick={() => setIsDailyCategoryReportOpen(true)}
+                  className="h-9 bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold text-xs gap-1.5 rounded-xl shadow-sm"
+                >
+                  <Calendar className="w-3.5 h-3.5 text-white" />
+                  Daily Category Report
+                </Button>
 
-                    {reportDateFilter === 'custom' && (
-                      <div className="flex items-center gap-2 animate-in slide-in-from-left-2 duration-300">
-                        <span className="text-[10px] uppercase font-black text-white/40 tracking-wider">From</span>
-                        <Input
-                          type="date"
-                          value={customFilterStartDate}
-                          onChange={(e) => {
-                            setCustomFilterStartDate(e.target.value);
-                            setCurrentPage(0);
-                          }}
-                          className="h-9 w-[120px] bg-[#0f1115] border-white/5 text-xs text-white/70 rounded-xl focus:border-[#14b8a6]/50 focus:ring-[#14b8a6]/20"
-                        />
-                        <span className="text-[10px] uppercase font-black text-white/40 tracking-wider">To</span>
-                        <Input
-                          type="date"
-                          value={customFilterEndDate}
-                          onChange={(e) => {
-                            setCustomFilterEndDate(e.target.value);
-                            setCurrentPage(0);
-                          }}
-                          className="h-9 w-[120px] bg-[#0f1115] border-white/5 text-xs text-white/70 rounded-xl focus:border-[#14b8a6]/50 focus:ring-[#14b8a6]/20"
-                        />
-                      </div>
-                    )}
-                  </>
+                <Select value={reportDateFilter} onValueChange={(v) => {
+                   setReportDateFilter(v);
+                   setCurrentPage(0);
+                 }}>
+                  <SelectTrigger className="w-[155px] h-9 bg-white border-slate-300 text-xs text-slate-800 rounded-xl font-semibold shadow-sm">
+                    <SelectValue placeholder="Date Range" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-slate-200 text-slate-800 shadow-xl">
+                    <SelectItem value="all">All Time Records</SelectItem>
+                    <SelectItem value="today">Daily Report (Today)</SelectItem>
+                    <SelectItem value="yesterday">Yesterday</SelectItem>
+                    <SelectItem value="weekly">Last 7 Days</SelectItem>
+                    <SelectItem value="monthly">This Month</SelectItem>
+                    <SelectItem value="yearly">This Year</SelectItem>
+                    <SelectItem value="custom">Specific Date</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {reportDateFilter === 'custom' && (
+                  <div className="flex items-center gap-2 animate-in slide-in-from-left-2 duration-300">
+                    <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">From</span>
+                    <Input
+                      type="date"
+                      value={customFilterStartDate}
+                      onChange={(e) => {
+                        setCustomFilterStartDate(e.target.value);
+                        setCurrentPage(0);
+                      }}
+                      className="h-9 w-[130px] bg-white border-slate-300 text-xs text-slate-800 rounded-xl"
+                    />
+                    <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">To</span>
+                    <Input
+                      type="date"
+                      value={customFilterEndDate}
+                      onChange={(e) => {
+                        setCustomFilterEndDate(e.target.value);
+                        setCurrentPage(0);
+                      }}
+                      className="h-9 w-[130px] bg-white border-slate-300 text-xs text-slate-800 rounded-xl"
+                    />
+                  </div>
                 )}
               {selectedRecordIds.length > 0 && (
                 <>
@@ -6915,6 +7020,12 @@ export default function FileTracking() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <DailyCategoryReportModal
+        isOpen={isDailyCategoryReportOpen}
+        onClose={() => setIsDailyCategoryReportOpen(false)}
+        dynMainCats={dynMainCats}
+        dynSubCats={dynSubCats}
+      />
     </div>
   );
 }

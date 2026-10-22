@@ -67,8 +67,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     setShowSplash(false);
   };
 
+  const isItemActive = (to: string) => {
+    if (to === "/dashboard" || to === "/") {
+      return location.pathname === "/" || location.pathname === "/dashboard";
+    }
+    return location.pathname === to;
+  };
+
   const topNavItems = [
-    { to: "/", icon: LayoutDashboard, label: "Dashboard", visible: !isRestrictedAsstCFO && !isEmpOperator && !isTransferUser && !isHRMSEmployee },
+    { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", visible: !isRestrictedAsstCFO && !isEmpOperator && !isTransferUser && !isHRMSEmployee },
     { to: "/book-section/file-tracking", icon: Shield, label: "File Tracking", visible: !isEmpOperator && !isTransferUser && !isHRMSEmployee },
     { to: "/bank-entries", icon: Landmark, label: "Bank Entries", visible: !isEmpOperator && !isTransferUser && !isHRMSEmployee },
     { to: "/budget-control", icon: Wallet, label: "Budget Control", visible: (userRole === 'admin' || userRole === 'super_admin' || userRole === 'cfo') && !isTransferUser && !isHRMSEmployee },
@@ -152,31 +159,31 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   ];
 
   return (
-    <div className="flex h-screen w-full bg-[#050505] text-white overflow-hidden relative font-sans antialiased">
+    <div className="flex h-screen w-full bg-[#f8fafc] text-slate-800 overflow-hidden relative font-sans antialiased">
       {/* Desktop Sidebar */}
       <motion.aside 
         initial={false}
         animate={{ width: collapsed ? 80 : 280 }}
-        className="hidden md:flex flex-col bg-black/90 backdrop-blur-3xl border-r border-white/10 relative z-30 transition-all duration-300"
+        className="hidden md:flex flex-col bg-[#1e3a8a] text-white border-r border-blue-900 shadow-md relative z-30 transition-all duration-300"
       >
-        <div className="p-6 flex items-center justify-between border-b border-white/10">
+        <div className="p-6 flex items-center justify-between border-b border-blue-800">
           {!collapsed && (
             <div className="flex items-center gap-3">
-              <img src="/kwsc-logo.png" alt="KWSC" className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" />
-              <span className="font-bold text-lg tracking-tight text-white">KW&SC FINANCE</span>
+              <img src="/kwsc-logo.png" alt="KWSC" className="w-10 h-10 object-contain drop-shadow" />
+              <span className="font-black text-lg tracking-tight text-white">KW&SC FINANCE</span>
             </div>
           )}
           {collapsed && (
             <img src="/kwsc-logo.png" alt="KWSC" className="w-8 h-8 object-contain mx-auto" />
           )}
           {!collapsed && (
-            <button onClick={() => setCollapsed(!collapsed)} className="p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors">
+            <button onClick={() => setCollapsed(!collapsed)} className="p-2 rounded-lg hover:bg-blue-800 text-blue-200 hover:text-white transition-colors">
               <ChevronLeft className="w-5 h-5" />
             </button>
           )}
         </div>
         {collapsed && (
-          <button onClick={() => setCollapsed(!collapsed)} className="mt-4 mx-auto p-2 rounded-lg hover:bg-white/10 text-white/50 hover:text-white transition-colors">
+          <button onClick={() => setCollapsed(!collapsed)} className="mt-4 mx-auto p-2 rounded-lg hover:bg-blue-800 text-blue-200 hover:text-white transition-colors">
             <ChevronRight className="w-5 h-5" />
           </button>
         )}
@@ -184,36 +191,38 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <ScrollArea className="flex-1 px-4 py-6 custom-scrollbar">
           <div className="space-y-6">
 
-            <div className="space-y-1">
-              {topNavItems.map((item) => (
-                <motion.div key={item.to} whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}>
-                  <Link to={item.to} className={cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative overflow-hidden",
-                    location.pathname === item.to ? "bg-white/10 text-white shadow-md shadow-black/50" : "text-white/50 hover:text-white hover:bg-white/5"
-                  )}>
-                    {location.pathname === item.to && (
-                      <motion.div layoutId="main-sidebar-active" className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full" />
-                    )}
-                    <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", location.pathname === item.to ? "text-blue-400" : "group-hover:text-white")} />
-                    {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
-                  </Link>
-                </motion.div>
-              ))}
+            <div className="space-y-1.5">
+              {topNavItems.map((item) => {
+                const active = isItemActive(item.to);
+                return (
+                  <motion.div key={item.to} whileHover={{ x: 3 }} whileTap={{ scale: 0.98 }}>
+                    <Link to={item.to} className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative overflow-hidden font-bold text-sm",
+                      active 
+                        ? "bg-white text-[#1e3a8a] shadow-md" 
+                        : "text-white hover:text-white hover:bg-white/15"
+                    )}>
+                      <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", active ? "text-[#1e3a8a]" : "text-white")} />
+                      {!collapsed && <span>{item.label}</span>}
+                    </Link>
+                  </motion.div>
+                );
+              })}
             </div>
 
             {categories.map((category) => (
-              <div key={category.id} className="pt-4 border-t border-white/10">
+              <div key={category.id} className="pt-4 border-t border-blue-800">
                 {!collapsed && (
                   <button 
                     onClick={() => setOpenCategory(openCategory === category.id ? null : category.id)}
-                    className="w-full flex items-center justify-between px-3 mb-2 text-xs font-bold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
+                    className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black text-white uppercase tracking-wider hover:text-blue-200 transition-colors"
                   >
                     {category.label}
                     <motion.div
                       animate={{ rotate: openCategory === category.id ? 90 : 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <ChevronRight className="w-3 h-3" />
+                      <ChevronRight className="w-3.5 h-3.5 text-white" />
                     </motion.div>
                   </button>
                 )}
@@ -224,22 +233,24 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="space-y-1 overflow-hidden mt-2"
+                      className="space-y-1.5 overflow-hidden mt-2"
                     >
-                      {category.items.map((item) => (
-                        <motion.div key={item.to} whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}>
-                          <Link to={item.to} className={cn(
-                            "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative overflow-hidden",
-                            location.pathname === item.to ? "bg-white/10 text-white border border-white/5 shadow-md shadow-black/50" : "text-white/50 hover:text-white hover:bg-white/5"
-                          )}>
-                            {location.pathname === item.to && (
-                              <motion.div layoutId="main-sidebar-active" className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-r-full" />
-                            )}
-                            <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", location.pathname === item.to ? "text-blue-400" : "group-hover:text-white")} />
-                            {!collapsed && <span className="font-medium text-sm">{item.label}</span>}
-                          </Link>
-                        </motion.div>
-                      ))}
+                      {category.items.map((item) => {
+                        const active = isItemActive(item.to);
+                        return (
+                          <motion.div key={item.to} whileHover={{ x: 3 }} whileTap={{ scale: 0.98 }}>
+                            <Link to={item.to} className={cn(
+                              "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group relative overflow-hidden font-bold text-sm",
+                              active 
+                                ? "bg-white text-[#1e3a8a] shadow-md" 
+                                : "text-white hover:text-white hover:bg-white/15"
+                            )}>
+                              <item.icon className={cn("w-4 h-4 shrink-0 transition-colors", active ? "text-[#1e3a8a]" : "text-white")} />
+                              {!collapsed && <span>{item.label}</span>}
+                            </Link>
+                          </motion.div>
+                        );
+                      })}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -248,94 +259,110 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </ScrollArea>
 
-        <div className="p-4 border-t border-white/10 space-y-2">
-          <motion.div whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}>
-            <Link to="/profile" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all">
-              <Settings2 className="w-5 h-5 shrink-0" />
-              {!collapsed && <span className="font-medium">Profile Settings</span>}
+        <div className="p-4 border-t border-blue-800 space-y-2">
+          <motion.div whileHover={{ x: 3 }} whileTap={{ scale: 0.98 }}>
+            <Link to="/profile" className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-white hover:bg-white/15 transition-all font-bold text-sm">
+              <Settings2 className="w-5 h-5 shrink-0 text-white" />
+              {!collapsed && <span>Profile Settings</span>}
             </Link>
           </motion.div>
-          <motion.div whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}>
-            <button onClick={() => signOut()} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all">
-              <LogOut className="w-5 h-5 shrink-0" />
-              {!collapsed && <span className="font-medium">Logout</span>}
+          <motion.div whileHover={{ x: 3 }} whileTap={{ scale: 0.98 }}>
+            <button onClick={() => signOut()} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-red-100 hover:bg-red-500/25 hover:text-white transition-all font-bold text-sm">
+              <LogOut className="w-5 h-5 shrink-0 text-red-200" />
+              {!collapsed && <span>Logout</span>}
             </button>
           </motion.div>
-          <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all hidden">
-            {theme === 'dark' ? <Sun className="w-5 h-5 shrink-0" /> : <Moon className="w-5 h-5 shrink-0" />}
-            {!collapsed && <span className="font-medium">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
-          </button>
+          <motion.div whileHover={{ x: 3 }} whileTap={{ scale: 0.98 }}>
+            <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-white hover:bg-white/15 transition-all font-bold text-sm">
+              {theme === 'dark' ? <Sun className="w-5 h-5 shrink-0 text-amber-300" /> : <Moon className="w-5 h-5 shrink-0 text-white" />}
+              {!collapsed && <span>{theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}</span>}
+            </button>
+          </motion.div>
         </div>
       </motion.aside>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
-        <header className="flex h-16 items-center justify-between px-4 md:px-8 border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-20">
+        <header className="flex h-16 items-center justify-between px-4 md:px-8 border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm">
           <div className="flex items-center gap-2 md:gap-4">
             <div className="md:hidden">
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/10">
+                  <Button variant="ghost" size="icon" className="text-slate-700 hover:text-[#1e3a8a] hover:bg-slate-100">
                     <Menu className="w-5 h-5" />
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-72 flex flex-col bg-[#111] border-r border-white/10">
+                <SheetContent side="left" className="p-0 w-72 flex flex-col bg-[#1e3a8a] text-white border-r border-blue-900">
                   <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-                  <div className="p-6 flex items-center gap-3 border-b border-white/10">
-                    <img src="/kwsc-logo.png" alt="KWSC" className="w-10 h-10 object-contain drop-shadow-md" />
-                    <span className="font-bold text-lg tracking-tight text-white">KW&SC FINANCE</span>
+                  <div className="p-6 flex items-center gap-3 border-b border-blue-800">
+                    <img src="/kwsc-logo.png" alt="KWSC" className="w-10 h-10 object-contain drop-shadow" />
+                    <span className="font-black text-lg tracking-tight text-white">KW&SC FINANCE</span>
                   </div>
                   
                   <ScrollArea className="flex-1 px-4 py-6">
                     <div className="space-y-6">
-                      <div className="space-y-1">
-                        {topNavItems.map((item) => (
-                          <Link key={item.to} to={item.to} className={cn(
-                            "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative",
-                            location.pathname === item.to ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                          )}>
-                            <item.icon className="w-5 h-5 shrink-0" />
-                            <span className="font-medium">{item.label}</span>
-                          </Link>
-                        ))}
+                      <div className="space-y-1.5">
+                        {topNavItems.map((item) => {
+                          const active = isItemActive(item.to);
+                          return (
+                            <Link key={item.to} to={item.to} className={cn(
+                              "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative font-bold text-sm",
+                              active 
+                                ? "bg-white text-[#1e3a8a] shadow-md" 
+                                : "text-white hover:text-white hover:bg-white/15"
+                            )}>
+                              <item.icon className={cn("w-5 h-5 shrink-0", active ? "text-[#1e3a8a]" : "text-white")} />
+                              <span>{item.label}</span>
+                            </Link>
+                          );
+                        })}
                       </div>
 
                       {categories.map((category) => (
-                        <div key={category.id} className="pt-4 border-t border-white/10">
+                        <div key={category.id} className="pt-4 border-t border-blue-800">
                           <button 
                             onClick={() => setOpenCategory(openCategory === category.id ? null : category.id)}
-                            className="w-full flex items-center justify-between px-3 mb-2 text-xs font-semibold text-blue-400 uppercase tracking-wider hover:text-blue-300 transition-colors"
+                            className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black text-white uppercase tracking-wider hover:text-blue-200 transition-colors"
                           >
                             {category.label}
-                            <ChevronRight className={cn("w-3 h-3 transition-transform duration-200", openCategory === category.id && "rotate-90")} />
+                            <ChevronRight className={cn("w-3.5 h-3.5 transition-transform duration-200 text-white", openCategory === category.id && "rotate-90")} />
                           </button>
                           <div className={cn(
-                            "space-y-1 overflow-hidden transition-all duration-300 ease-in-out",
+                            "space-y-1.5 overflow-hidden transition-all duration-300 ease-in-out",
                             openCategory === category.id ? "max-h-[500px] opacity-100 mt-2" : "max-h-0 opacity-0"
                           )}>
-                            {category.items.map((item) => (
-                              <Link key={item.to} to={item.to} className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative",
-                                location.pathname === item.to ? "bg-white/10 text-white border border-white/5" : "text-white/50 hover:text-white hover:bg-white/5"
-                              )}>
-                                <item.icon className="w-5 h-5 shrink-0" />
-                                <span className="font-medium text-sm">{item.label}</span>
-                              </Link>
-                            ))}
+                            {category.items.map((item) => {
+                              const active = isItemActive(item.to);
+                              return (
+                                <Link key={item.to} to={item.to} className={cn(
+                                  "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group relative font-bold text-sm",
+                                  active 
+                                    ? "bg-white text-[#1e3a8a] shadow-md" 
+                                    : "text-white hover:text-white hover:bg-white/15"
+                                )}>
+                                  <item.icon className={cn("w-4 h-4 shrink-0", active ? "text-[#1e3a8a]" : "text-white")} />
+                                  <span>{item.label}</span>
+                                </Link>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}
                     </div>
                   </ScrollArea>
 
-                  <div className="p-4 border-t border-white/10 space-y-2">
-                    <Link to="/profile" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/50 hover:text-white hover:bg-white/5 transition-all">
-                      <Settings2 className="w-5 h-5 shrink-0" />
-                      <span className="font-medium">Profile Settings</span>
+                  <div className="p-4 border-t border-blue-800 space-y-2">
+                    <button onClick={toggleTheme} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-white hover:bg-white/15 transition-all font-bold text-sm">
+                      {theme === 'dark' ? <Sun className="w-5 h-5 shrink-0 text-amber-300" /> : <Moon className="w-5 h-5 shrink-0 text-white" />}
+                      <span>{theme === 'dark' ? 'Switch to Light' : 'Switch to Dark'}</span>
+                    </button>
+                    <Link to="/profile" className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-white hover:bg-white/15 transition-all font-bold text-sm">
+                      <Settings2 className="w-5 h-5 shrink-0 text-white" />
+                      <span>Profile Settings</span>
                     </Link>
-                    <button onClick={() => signOut()} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-400 hover:bg-rose-500/10 transition-all">
-                      <LogOut className="w-5 h-5 shrink-0" />
-                      <span className="font-medium">Logout</span>
+                    <button onClick={() => signOut()} className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-red-100 hover:bg-red-500/25 hover:text-white transition-all font-bold text-sm">
+                      <LogOut className="w-5 h-5 shrink-0 text-red-200" />
+                      <span>Logout</span>
                     </button>
                   </div>
                 </SheetContent>
@@ -343,21 +370,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
             
             <div className="flex flex-col">
-              <h2 className="text-xs md:text-sm font-medium text-white/50">Welcome back,</h2>
-              <p className="text-sm md:text-lg font-black text-blue-400 italic uppercase tracking-wider">
+              <h2 className="text-xs font-semibold text-slate-500">Welcome back,</h2>
+              <p className="text-sm md:text-base font-black text-[#1e3a8a] uppercase tracking-wide">
                 {userName || sections.find(s => s.id === userRole)?.name || userRole}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 md:gap-4">
-            <div className="px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] md:text-xs font-bold uppercase tracking-tighter">
+            <div className="px-3 md:px-4 py-1 md:py-1.5 rounded-full bg-blue-50 border border-blue-200 text-[#1e3a8a] text-[10px] md:text-xs font-bold uppercase tracking-wide shadow-xs">
               {userRole === 'admin' ? 'System Administrator' : 'Active Department'}
             </div>
             <NotificationDropdown />
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-gradient-to-br from-[#050505] via-[#0a0a0a] to-[#111] relative custom-scrollbar">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f8fafc] text-slate-800 relative custom-scrollbar">
           <OfflineIndicator />
           <NotificationListener />
           <SpyListener />
@@ -377,38 +404,37 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 safe-area-pb">
-        <nav className="flex justify-around items-center bg-black/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden">
+        <nav className="flex justify-around items-center bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden">
           {!isEmpOperator ? (
             <>
               <Link to="/" className="flex-1 relative">
                 <motion.div whileTap={{ scale: 0.9 }} className="flex flex-col items-center justify-center gap-1 py-3">
                   {location.pathname === "/" && (
-                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-white/10 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
+                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-blue-50 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
                   )}
-                  <LayoutDashboard className={cn("w-5 h-5 transition-all duration-300", location.pathname === "/" ? "text-blue-400 scale-110 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" : "text-white/40")} strokeWidth={location.pathname === "/" ? 2.5 : 2} />
-                  <span className={cn("text-[10px] font-bold transition-all duration-300", location.pathname === "/" ? "text-white" : "text-transparent")}>Home</span>
+                  <LayoutDashboard className={cn("w-5 h-5 transition-all duration-200", location.pathname === "/" ? "text-[#1e3a8a] scale-110 font-bold" : "text-slate-400")} strokeWidth={location.pathname === "/" ? 2.5 : 2} />
+                  <span className={cn("text-[10px] font-bold transition-all duration-200", location.pathname === "/" ? "text-[#1e3a8a]" : "text-slate-400")}>Home</span>
                 </motion.div>
               </Link>
 
               <Link to="/book-section/file-tracking" className="flex-1 relative">
                 <motion.div whileTap={{ scale: 0.9 }} className="flex flex-col items-center justify-center gap-1 py-3">
                   {location.pathname === "/book-section/file-tracking" && (
-                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-white/10 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
+                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-blue-50 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
                   )}
-                  <Shield className={cn("w-5 h-5 transition-all duration-300", location.pathname === "/book-section/file-tracking" ? "text-blue-400 scale-110 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" : "text-white/40")} strokeWidth={location.pathname === "/book-section/file-tracking" ? 2.5 : 2} />
-                  <span className={cn("text-[10px] font-bold transition-all duration-300", location.pathname === "/book-section/file-tracking" ? "text-white" : "text-transparent")}>Tracking</span>
+                  <Shield className={cn("w-5 h-5 transition-all duration-200", location.pathname === "/book-section/file-tracking" ? "text-[#1e3a8a] scale-110 font-bold" : "text-slate-400")} strokeWidth={location.pathname === "/book-section/file-tracking" ? 2.5 : 2} />
+                  <span className={cn("text-[10px] font-bold transition-all duration-200", location.pathname === "/book-section/file-tracking" ? "text-[#1e3a8a]" : "text-slate-400")}>Tracking</span>
                 </motion.div>
               </Link>
               
               <Link to="/restricted" className="flex-1 relative">
                 <motion.div whileTap={{ scale: 0.9 }} className="flex flex-col items-center justify-center gap-1 py-3">
                   {location.pathname === "/restricted" && (
-                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-white/10 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
+                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-blue-50 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
                   )}
-                  <Lock className={cn("w-5 h-5 transition-all duration-300", location.pathname === "/restricted" ? "text-blue-400 scale-110 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" : "text-white/40")} strokeWidth={location.pathname === "/restricted" ? 2.5 : 2} />
-                  <span className={cn("text-[10px] font-bold transition-all duration-300", location.pathname === "/restricted" ? "text-white" : "text-transparent")}>Admin</span>
+                  <Lock className={cn("w-5 h-5 transition-all duration-200", location.pathname === "/restricted" ? "text-[#1e3a8a] scale-110 font-bold" : "text-slate-400")} strokeWidth={location.pathname === "/restricted" ? 2.5 : 2} />
+                  <span className={cn("text-[10px] font-bold transition-all duration-200", location.pathname === "/restricted" ? "text-[#1e3a8a]" : "text-slate-400")}>Admin</span>
                 </motion.div>
               </Link>
             </>
@@ -417,27 +443,27 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Link to="/book-section/emp-details" className="flex-1 relative">
                 <motion.div whileTap={{ scale: 0.9 }} className="flex flex-col items-center justify-center gap-1 py-3">
                   {location.pathname === "/book-section/emp-details" && (
-                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-white/10 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
+                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-blue-50 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
                   )}
-                  <ListTree className={cn("w-5 h-5 transition-all duration-300", location.pathname === "/book-section/emp-details" ? "text-blue-400 scale-110 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" : "text-white/40")} strokeWidth={location.pathname === "/book-section/emp-details" ? 2.5 : 2} />
-                  <span className={cn("text-[10px] font-bold transition-all duration-300", location.pathname === "/book-section/emp-details" ? "text-white" : "text-transparent")}>Details</span>
+                  <ListTree className={cn("w-5 h-5 transition-all duration-200", location.pathname === "/book-section/emp-details" ? "text-[#1e3a8a] scale-110 font-bold" : "text-slate-400")} strokeWidth={location.pathname === "/book-section/emp-details" ? 2.5 : 2} />
+                  <span className={cn("text-[10px] font-bold transition-all duration-200", location.pathname === "/book-section/emp-details" ? "text-[#1e3a8a]" : "text-slate-400")}>Details</span>
                 </motion.div>
               </Link>
 
               <Link to="/book-section/all-employees" className="flex-1 relative">
                 <motion.div whileTap={{ scale: 0.9 }} className="flex flex-col items-center justify-center gap-1 py-3">
                   {location.pathname === "/book-section/all-employees" && (
-                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-white/10 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
+                    <motion.div layoutId="mobile-main-active" className="absolute inset-0 bg-blue-50 rounded-3xl -z-10" transition={{ type: "spring", bounce: 0, duration: 0.2 }} />
                   )}
-                  <Search className={cn("w-5 h-5 transition-all duration-300", location.pathname === "/book-section/all-employees" ? "text-blue-400 scale-110 drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]" : "text-white/40")} strokeWidth={location.pathname === "/book-section/all-employees" ? 2.5 : 2} />
-                  <span className={cn("text-[10px] font-bold transition-all duration-300", location.pathname === "/book-section/all-employees" ? "text-white" : "text-transparent")}>Search</span>
+                  <Search className={cn("w-5 h-5 transition-all duration-200", location.pathname === "/book-section/all-employees" ? "text-[#1e3a8a] scale-110 font-bold" : "text-slate-400")} strokeWidth={location.pathname === "/book-section/all-employees" ? 2.5 : 2} />
+                  <span className={cn("text-[10px] font-bold transition-all duration-200", location.pathname === "/book-section/all-employees" ? "text-[#1e3a8a]" : "text-slate-400")}>Search</span>
                 </motion.div>
               </Link>
             </>
           )}
-          <button onClick={() => signOut()} className="flex-1 flex flex-col items-center justify-center gap-1 text-rose-400">
+          <button onClick={() => signOut()} className="flex-1 flex flex-col items-center justify-center gap-1 text-rose-600 hover:text-rose-700">
             <LogOut className="w-5 h-5" />
-            <span className="text-[10px] font-medium text-transparent">Exit</span>
+            <span className="text-[10px] font-bold text-slate-500">Exit</span>
           </button>
         </nav>
       </div>

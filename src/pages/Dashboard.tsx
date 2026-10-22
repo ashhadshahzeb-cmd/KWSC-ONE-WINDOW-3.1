@@ -1,327 +1,1183 @@
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
+  Inbox,
+  Send,
+  FileText,
+  Clock,
+  Building2,
   TrendingUp,
-  Wallet,
-  Landmark,
-  ArrowUpRight,
-  ArrowDownRight,
   BarChart3,
-  List
+  PieChart as PieIcon,
+  Search,
+  Calendar,
+  ArrowUpRight,
+  ArrowDownLeft,
+  RefreshCw,
+  Filter,
+  Layers,
+  ChevronRight,
+  X,
+  Eye,
+  FileCheck,
+  CheckCircle2,
+  Database
 } from "lucide-react";
-import { bankAccounts, transactions, monthlyData, formatCurrency } from "@/lib/mock-data";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell
+} from "recharts";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { motion } from "framer-motion";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/db";
+import { formatCurrency } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
-const totalBalance = bankAccounts.reduce((s, b) => s + (b.currency === 'PKR' ? b.balance : b.balance * 280), 0);
+// KW&SC Corporate Blue Palette (Zero Gradient, High Contrast)
+const THEME_BLUE = "#1e3a8a";
+const CHART_COLORS = [
+  "#1e3a8a", // Primary Navy Blue
+  "#0284c7", // Sky Blue
+  "#0d9488", // Teal
+  "#2563eb", // Royal Blue
+  "#d97706", // Amber
+  "#059669", // Emerald
+  "#4f46e5", // Indigo
+  "#db2777", // Rose
+  "#7c3aed", // Violet
+  "#475569"  // Slate
+];
 
-const generateMockBreakdown = (amount: number, type: 'Income' | 'Expense', month: string) => {
-  const pieces = type === 'Income' ? [0.4, 0.35, 0.25] : [0.5, 0.3, 0.2];
-  const descriptions = type === 'Income' 
-    ? ['Govt Grant / Subvention', 'Water Tax Collection', 'Misc. Receipts']
-    : ['Contractor Payments', 'POL Bills', 'Employee Salaries'];
-  
-  return pieces.map((p, i) => ({
-    id: i,
-    date: `1${i + 2}-${month}-2024`,
-    ref: `KWSC/${type === 'Income' ? 'INC' : 'EXP'}/${1000 + i}`,
-    description: descriptions[i],
-    amount: amount * p
-  }));
-};
+interface DashboardRecord {
+  id: string;
+  tracking_id?: string;
+  cfo_diary_number?: string;
+  receiving_number?: string;
+  inward_date?: string;
+  outward_date?: string;
+  main_category?: string;
+  sub_category?: string;
+  mark_to?: string;
+  amount?: number;
+  subject?: string;
+  created_at?: string;
+}
+
+const CACHE_KEY = "kwsc_dashboard_real_data_v2";
 
 export default function Dashboard() {
-  const [mounted, setMounted] = useState(false);
-  const [selectedBarData, setSelectedBarData] = useState<{ month: string, type: 'Income' | 'Expense', amount: number, items: any[] } | null>(null);
-
-  useEffect(() => setMounted(true), []);
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.15
+  const [records, setRecords] = useState<DashboardRecord[]>(() => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
+    } catch (e) {}
+    return [];
+  });
+
+  const [isLoading, setIsLoading] = useState<boolean>(records.length === 0);
+  const [syncProgress, setSyncProgress] = useState<string>("");
+  const [timeRange, setTimeRange] = useState<"all" | "today" | "30d" | "this_month" | "this_year">("all");
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [chartViewMode, setChartViewMode] = useState<"bar" | "area">("bar");
+  
+  // Drill-down Modal State
+  const [drilldownModal, setDrilldownModal] = useState<{
+    title: string;
+    type: "category" | "section";
+    key: string;
+    items: DashboardRecord[];
+  } | null>(null);
+
+  // Fetch full dataset on mount or refresh
+  useEffect(() => {
+    loadFullRealDataset();
+  }, []);
+
+  const loadFullRealDataset = async () => {
+    setIsLoading(true);
+    setSyncProgress("Connecting to File Tracking database...");
+    try {
+      // 1. Fetch exact count from Supabase
+      const { count, error: countErr } = await (supabase
+        .from("file_tracking_records" as any)
+        .select("*", { count: "exact", head: true }));
+
+      const totalCount = count || 12397;
+      setSyncProgress(`Loading ${totalCount.toLocaleString()} official records...`);
+
+      // 2. Fetch in parallel chunks of 1000 to overcome PostgREST default limit
+      const chunkSize = 1000;
+      const promises: Promise<DashboardRecord[]>[] = [];
+
+      for (let i = 0; i < totalCount; i += chunkSize) {
+        promises.push(
+          (supabase
+            .from("file_tracking_records" as any)
+            .select("id, cfo_diary_number, receiving_number, inward_date, outward_date, main_category, sub_category, mark_to, amount, subject, created_at")
+            .range(i, i + chunkSize - 1) as any)
+            .then((res: any) => res.data || [])
+        );
+      }
+
+      const chunkResults = await Promise.all(promises);
+      let allRemoteRecords = chunkResults.flat();
+
+      // 3. Merge unsynced dirty records from Dexie IndexedDB
+      try {
+        const localRecords = await db.records.filter(r => !r.deleted_locally && r.status !== "trashed").toArray();
+        const localDirty = localRecords.filter(r => r.is_dirty);
+        if (localDirty.length > 0) {
+          const remoteIds = new Set(allRemoteRecords.map(r => r.id));
+          const uniqueDirty = localDirty.filter(d => !remoteIds.has(d.id));
+          allRemoteRecords = [...uniqueDirty as any, ...allRemoteRecords];
+        }
+      } catch (dexErr) {
+        console.warn("Dexie local merge note:", dexErr);
+      }
+
+      if (allRemoteRecords.length > 0) {
+        setRecords(allRemoteRecords);
+        try {
+          // Cache in localStorage for 0ms instant reload
+          localStorage.setItem(CACHE_KEY, JSON.stringify(allRemoteRecords.slice(0, 15000)));
+        } catch (storageErr) {
+          console.warn("Storage quota note:", storageErr);
+        }
+      }
+    } catch (err) {
+      console.error("Dashboard full real data load error:", err);
+    } finally {
+      setIsLoading(false);
+      setSyncProgress("");
     }
   };
 
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  // Filter records based on selected time range, category, and search query
+  const filteredRecords = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    return records.filter(r => {
+      // Time filter
+      const rDateStr = r.inward_date || r.created_at?.slice(0, 10);
+      if (timeRange !== "all" && rDateStr) {
+        const rDate = new Date(rDateStr);
+        if (timeRange === "today" && rDateStr !== todayStr) return false;
+        if (timeRange === "30d" && rDate < thirtyDaysAgo) return false;
+        if (timeRange === "this_month" && (rDate.getFullYear() !== currentYear || rDate.getMonth() !== currentMonth)) return false;
+        if (timeRange === "this_year" && rDate.getFullYear() !== currentYear) return false;
+      }
+
+      // Category filter
+      if (selectedCategoryFilter !== "all") {
+        const cat = (r.main_category || "others").toLowerCase().trim();
+        if (cat !== selectedCategoryFilter.toLowerCase()) return false;
+      }
+
+      // Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const diary = (r.cfo_diary_number || "").toLowerCase();
+        const receiving = (r.receiving_number || "").toLowerCase();
+        const subject = (r.subject || "").toLowerCase();
+        const markTo = (r.mark_to || "").toLowerCase();
+        const cat = (r.main_category || "").toLowerCase();
+        if (!diary.includes(q) && !receiving.includes(q) && !subject.includes(q) && !markTo.includes(q) && !cat.includes(q)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [records, timeRange, selectedCategoryFilter, searchQuery]);
+
+  // Aggregate Key Real KPI Metrics
+  const stats = useMemo(() => {
+    let inwardCount = 0;
+    let outwardCount = 0;
+    let totalAmount = 0;
+    const activeSections = new Set<string>();
+
+    filteredRecords.forEach(r => {
+      inwardCount++;
+
+      // Outward file logic in File Tracking:
+      // File has been exited or forwarded out to an external department with distinct outward date
+      const isExited = r.mark_to === "exited";
+      const isDistinctOutward = Boolean(
+        r.outward_date &&
+        r.outward_date.trim() !== "" &&
+        r.inward_date &&
+        r.outward_date !== r.inward_date
+      );
+
+      if (isExited || isDistinctOutward) {
+        outwardCount++;
+      }
+
+      if (r.amount) {
+        const amt = Number(r.amount);
+        if (!isNaN(amt) && amt > 0) totalAmount += amt;
+      }
+      if (r.mark_to && r.mark_to.trim() !== "" && r.mark_to !== "exited") {
+        activeSections.add(r.mark_to.trim().toLowerCase());
+      }
+    });
+
+    const inTransitCount = Math.max(0, inwardCount - outwardCount);
+    const outwardRate = inwardCount > 0 ? ((outwardCount / inwardCount) * 100).toFixed(1) : "0.0";
+
+    return {
+      totalFiles: filteredRecords.length,
+      inwardCount,
+      outwardCount,
+      inTransitCount,
+      outwardRate,
+      totalAmount,
+      activeSectionsCount: activeSections.size
+    };
+  }, [filteredRecords]);
+
+  // Real Category Breakdown ("har category ki file bataye")
+  const categoryBreakdown = useMemo(() => {
+    const map: Record<string, { count: number; totalAmount: number; subCats: Record<string, number> }> = {};
+
+    filteredRecords.forEach(r => {
+      let rawCat = (r.main_category || "others").trim().toLowerCase();
+      let catName = rawCat;
+
+      if (catName === "employee") catName = "Employee / HR";
+      else if (catName === "contractor") catName = "Contractor Bills";
+      else if (catName === "pol_bills" || catName === "pol") catName = "POL & Fuel Bills";
+      else if (catName === "medical" || catName === "medical_bills") catName = "Medical Claims";
+      else if (catName === "contingencies" || catName === "contingency") catName = "Contingencies";
+      else if (catName === "security_deposit") catName = "Security Deposit";
+      else if (catName === "imprest" || catName === "impress") catName = "Imprest Cash";
+      else if (catName === "news-paper" || catName === "newspaper") catName = "Newspaper Bills";
+      else if (catName === "books" || catName === "book-section") catName = "Books & Accounts";
+      else if (catName === "k-electric") catName = "K-Electric Bills";
+      else if (catName === "others" || catName === "" || catName === "general") catName = "Others / General";
+      else {
+        catName = catName.charAt(0).toUpperCase() + catName.slice(1);
+      }
+
+      if (!map[catName]) {
+        map[catName] = { count: 0, totalAmount: 0, subCats: {} };
+      }
+      map[catName].count += 1;
+      const amt = Number(r.amount);
+      if (!isNaN(amt) && amt > 0) map[catName].totalAmount += amt;
+
+      const sub = r.sub_category || "General";
+      map[catName].subCats[sub] = (map[catName].subCats[sub] || 0) + 1;
+    });
+
+    const total = filteredRecords.length || 1;
+    return Object.keys(map).map((catName, idx) => ({
+      name: catName,
+      count: map[catName].count,
+      percentage: Number(((map[catName].count / total) * 100).toFixed(1)),
+      totalAmount: map[catName].totalAmount,
+      avgAmount: map[catName].count > 0 ? map[catName].totalAmount / map[catName].count : 0,
+      subCats: map[catName].subCats,
+      color: CHART_COLORS[idx % CHART_COLORS.length]
+    })).sort((a, b) => b.count - a.count);
+  }, [filteredRecords]);
+
+  // Real Section Breakdown ("jis section me jitni files gain hai wo bhi bataye")
+  const sectionBreakdown = useMemo(() => {
+    const map: Record<string, { count: number; totalAmount: number; outwardCount: number }> = {};
+
+    filteredRecords.forEach(r => {
+      let rawSec = (r.mark_to || "unassigned").trim().toLowerCase();
+      let secName = rawSec;
+
+      if (secName === "budget") secName = "Budget Section";
+      else if (secName === "cia") secName = "CIA Section";
+      else if (secName === "establishment") secName = "Establishment Section";
+      else if (secName === "director_it") secName = "Director IT";
+      else if (secName === "director_finance" || secName === "diretor finance") secName = "Director Finance";
+      else if (secName === "fund") secName = "CP Fund Section";
+      else if (secName === "pension") secName = "Pension Section";
+      else if (secName === "books") secName = "Books Section";
+      else if (secName === "internal_audit_2") secName = "Internal Audit - II";
+      else if (secName === "internal_audit_1") secName = "Internal Audit - I";
+      else if (secName === "director-f&a" || secName === "director_fa") secName = "Director F&A";
+      else if (secName === "director_audit") secName = "Director Audit";
+      else if (secName === "cfo") secName = "CFO Secretariat";
+      else if (secName === "sub_cfo") secName = "Sub CFO Office";
+      else if (secName === "chro") secName = "CHRO Office";
+      else if (secName === "medical") secName = "Medical Section";
+      else if (secName === "contractor") secName = "Contractor Section";
+      else if (secName === "exited") secName = "Exited / Completed";
+      else if (secName === "unassigned" || secName === "") secName = "Unassigned / General";
+      else {
+        secName = secName.replace(/_/g, " ").toUpperCase();
+      }
+
+      if (!map[secName]) {
+        map[secName] = { count: 0, totalAmount: 0, outwardCount: 0 };
+      }
+      map[secName].count += 1;
+      const amt = Number(r.amount);
+      if (!isNaN(amt) && amt > 0) map[secName].totalAmount += amt;
+
+      if (r.mark_to === "exited" || (r.outward_date && r.inward_date && r.outward_date !== r.inward_date)) {
+        map[secName].outwardCount += 1;
+      }
+    });
+
+    const total = filteredRecords.length || 1;
+    return Object.keys(map).map((secName, idx) => ({
+      name: secName,
+      files: map[secName].count,
+      percentage: Number(((map[secName].count / total) * 100).toFixed(1)),
+      totalAmount: map[secName].totalAmount,
+      outwardCount: map[secName].outwardCount,
+      color: CHART_COLORS[idx % CHART_COLORS.length]
+    })).sort((a, b) => b.files - a.files);
+  }, [filteredRecords]);
+
+  // Real Inward vs Outward Monthly Movement Trends
+  const movementTrends = useMemo(() => {
+    const monthMap: Record<string, { month: string; sortKey: string; inward: number; outward: number; totalAmount: number }> = {};
+
+    filteredRecords.forEach(r => {
+      const dateStr = r.inward_date || r.created_at;
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return;
+
+      const year = d.getFullYear();
+      // Filter out invalid historical dates outside operational window
+      if (year < 2024 || year > 2027) return;
+
+      const sortKey = `${year}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const monthLabel = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+
+      if (!monthMap[sortKey]) {
+        monthMap[sortKey] = { month: monthLabel, sortKey, inward: 0, outward: 0, totalAmount: 0 };
+      }
+
+      monthMap[sortKey].inward += 1;
+      if (r.mark_to === "exited" || (r.outward_date && r.inward_date && r.outward_date !== r.inward_date)) {
+        monthMap[sortKey].outward += 1;
+      }
+      const amt = Number(r.amount);
+      if (!isNaN(amt) && amt > 0) monthMap[sortKey].totalAmount += amt;
+    });
+
+    const sorted = Object.values(monthMap).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+    return sorted.slice(-10);
+  }, [filteredRecords]);
+
+  // Drilldown Modal
+  const handleOpenDrilldown = (type: "category" | "section", key: string, title: string) => {
+    const items = filteredRecords.filter(r => {
+      if (type === "category") {
+        let cat = (r.main_category || "others").trim().toLowerCase();
+        return title.toLowerCase().includes(cat) || cat.includes(key.toLowerCase());
+      } else {
+        let sec = (r.mark_to || "unassigned").trim().toLowerCase();
+        return title.toLowerCase().includes(sec) || sec.includes(key.toLowerCase());
+      }
+    });
+
+    setDrilldownModal({
+      title,
+      type,
+      key,
+      items
+    });
+  };
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.06 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } }
   };
 
   return (
-    <div className="relative min-h-screen w-full pb-20">
-      <div className="relative z-10 space-y-6">
-        
-        {/* HEADER */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 to-[#0f1115] p-8 rounded-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
-        >
-          <div className="space-y-1">
-            <h1 className="text-2xl font-black flex items-center gap-3 text-white tracking-tighter">
-              <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-sky-400" />
+    <div className="w-full space-y-6 text-slate-900 pb-16 font-sans">
+      
+      {/* ══════════════════════════════════════════════════════════════════════════════
+          1. HEADER & CONTROLS TOOLBAR
+      ══════════════════════════════════════════════════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+      >
+        <div className="space-y-1">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center shadow-md">
+              <BarChart3 className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl md:text-3xl font-black text-[#1e3a8a] tracking-tight">
+                  KW&SC File Tracking & Operations Dashboard
+                </h1>
+                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-[#1e3a8a] border border-blue-200">
+                  <Database className="w-3 h-3 text-[#1e3a8a]" /> Official Records
+                </span>
               </div>
-              Financial Overview
-            </h1>
-            <p className="text-xs text-white/40 ml-14">
-              Real-time metrics and dynamic tracking.
-            </p>
-          </div>
-          <div className="flex gap-4">
-            <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl flex flex-col items-center shadow-inner">
-              <span className="text-[10px] uppercase text-white/50 font-bold tracking-widest mb-1">Total Balance</span>
-              <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">{formatCurrency(totalBalance)}</span>
+              <p className="text-xs text-slate-700 font-semibold mt-0.5">
+                Real-time metrics, live inward/outward file movements, and departmental exposure
+              </p>
             </div>
           </div>
+        </div>
+
+        {/* Filter Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200">
+            {[
+              { id: "all", label: "All Time" },
+              { id: "this_year", label: "This Year" },
+              { id: "this_month", label: "This Month" },
+              { id: "30d", label: "Last 30 Days" },
+              { id: "today", label: "Today" },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setTimeRange(tab.id as any)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  timeRange === tab.id
+                    ? "bg-[#1e3a8a] text-white shadow-sm"
+                    : "text-slate-700 hover:text-slate-900"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={loadFullRealDataset}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-xs shadow-sm transition-all disabled:opacity-50"
+            title="Refresh Live Data"
+          >
+            <RefreshCw className={cn("w-4 h-4 text-white", isLoading && "animate-spin")} />
+            <span>{isLoading ? "Syncing..." : "Refresh"}</span>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Sync Status Banner if Loading */}
+      {isLoading && (
+        <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl flex items-center justify-between text-xs font-bold text-[#1e3a8a]">
+          <span className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin text-[#1e3a8a]" />
+            {syncProgress || "Updating real statistics from File Tracking..."}
+          </span>
+          <span className="text-slate-600 font-semibold">Cached data displayed below</span>
+        </div>
+      )}
+
+      {/* Search & Category Filter */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search diary no, receiving, subject..."
+            className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+          <span className="text-xs font-black text-slate-700 uppercase tracking-wide flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-[#1e3a8a]" /> Category Filter:
+          </span>
+          <select
+            value={selectedCategoryFilter}
+            onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+            className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+          >
+            <option value="all">All Categories ({stats.totalFiles.toLocaleString()})</option>
+            <option value="employee">Employee / HR</option>
+            <option value="contractor">Contractor Bills</option>
+            <option value="pol_bills">POL & Fuel Bills</option>
+            <option value="medical">Medical Claims</option>
+            <option value="contingencies">Contingencies</option>
+            <option value="security_deposit">Security Deposit</option>
+            <option value="imprest">Imprest Cash</option>
+            <option value="books">Books & Accounts</option>
+            <option value="others">Others / General</option>
+          </select>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════════════
+          2. KEY REAL KPI CARDS (Inward, Outward, In-Transit, Real Claim Amount)
+      ══════════════════════════════════════════════════════════════════════════════ */}
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+      >
+        {/* TOTAL INWARD FILES */}
+        <motion.div variants={itemVariants}>
+          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow rounded-2xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
+                  Total Inward Files
+                </span>
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-[#1e3a8a] border border-blue-200 flex items-center justify-center font-bold">
+                  <ArrowDownLeft className="w-5 h-5 text-[#1e3a8a]" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-baseline gap-2 flex-wrap">
+                <span className="text-2xl sm:text-3xl xl:text-4xl font-black text-[#1e3a8a] tracking-tight">
+                  {stats.inwardCount.toLocaleString()}
+                </span>
+                <span className="text-[10px] sm:text-xs font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300 whitespace-nowrap">
+                  Total Received
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-slate-700 font-semibold">
+                Official files registered into KW&SC File Tracking
+              </p>
+            </CardContent>
+          </Card>
         </motion.div>
 
-        {/* 2 COLUMN GRID */}
-        <motion.div 
-          variants={container}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-        >
+        {/* TOTAL OUTWARD FILES */}
+        <motion.div variants={itemVariants}>
+          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow rounded-2xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
+                  Total Outward Files
+                </span>
+                <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-800 border border-sky-200 flex items-center justify-center font-bold">
+                  <ArrowUpRight className="w-5 h-5 text-sky-800" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-baseline gap-2 flex-wrap">
+                <span className="text-2xl sm:text-3xl xl:text-4xl font-black text-sky-800 tracking-tight">
+                  {stats.outwardCount.toLocaleString()}
+                </span>
+                <span className="text-[10px] sm:text-xs font-black text-sky-900 bg-sky-100 px-2 py-0.5 rounded-full border border-sky-300 whitespace-nowrap">
+                  {stats.outwardRate}% Dispatched
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-slate-700 font-semibold">
+                Files forwarded or exited to external departments
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-          {/* MAIN CHART - INCOME VS EXPENSES */}
-          <motion.div variants={item} className="h-full w-full flex flex-col">
-            <Card className="border-white/10 bg-[#09090b]/50 backdrop-blur-md flex flex-col min-h-[400px] flex-1 hover:border-white/20 transition-colors shadow-lg">
-            <CardHeader className="pb-2 border-b border-white/5">
-              <CardTitle className="text-sm font-black flex items-center justify-between text-white">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-blue-400" />
-                  Cash Flow Analytics
+        {/* ACTIVE IN SECTIONS (IN-TRANSIT) */}
+        <motion.div variants={itemVariants}>
+          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow rounded-2xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
+                  Active in Sections
+                </span>
+                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 border border-amber-200 flex items-center justify-center font-bold">
+                  <Clock className="w-5 h-5 text-amber-900" />
                 </div>
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div><span className="text-[10px] text-white/60 font-medium uppercase tracking-widest">Income</span></div>
-                  <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-orange-500"></div><span className="text-[10px] text-white/60 font-medium uppercase tracking-widest">Expenses</span></div>
+              </div>
+              <div className="mt-3 flex items-baseline gap-2 flex-wrap">
+                <span className="text-2xl sm:text-3xl xl:text-4xl font-black text-amber-800 tracking-tight">
+                  {stats.inTransitCount.toLocaleString()}
+                </span>
+                <span className="text-[10px] sm:text-xs font-black text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 whitespace-nowrap">
+                  In Progress
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-slate-700 font-semibold">
+                Files actively under review in internal trays & sections
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* TOTAL CLAIM AMOUNT */}
+        <motion.div variants={itemVariants}>
+          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow rounded-2xl">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
+                  Total File Amount (PKR)
+                </span>
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-200 flex items-center justify-center font-bold">
+                  <FileCheck className="w-5 h-5 text-emerald-900" />
                 </div>
+              </div>
+              <div className="mt-3">
+                <span className="text-lg sm:text-xl lg:text-2xl font-black text-slate-900 tracking-tight font-mono break-all leading-tight">
+                  {formatCurrency(stats.totalAmount)}
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-slate-700 font-semibold">
+                Combined financial value across recorded claims
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════════════════════════════════
+          3. MAIN CHARTS (Inward vs Outward Movement Trends & Category Share)
+      ══════════════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* CHART 1: INWARD VS OUTWARD MOVEMENT TRENDS */}
+        <Card className="lg:col-span-2 bg-white border-slate-200 shadow-sm rounded-2xl">
+          <CardHeader className="pb-3 border-b border-slate-200 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-black text-[#1e3a8a] flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-[#1e3a8a]" />
+                Inward vs Outward File Movement Trends
               </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 w-full relative pt-6">
+              <p className="text-xs text-slate-600 font-semibold mt-0.5">
+                Monthly inflow of files versus outward movements
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-black">
+                <span className="flex items-center gap-1.5 text-[#1e3a8a]">
+                  <span className="w-3 h-3 rounded-full bg-[#1e3a8a] inline-block" /> Inward ({stats.inwardCount.toLocaleString()})
+                </span>
+                <span className="flex items-center gap-1.5 text-sky-700">
+                  <span className="w-3 h-3 rounded-full bg-[#0284c7] inline-block" /> Outward ({stats.outwardCount.toLocaleString()})
+                </span>
+              </div>
+              
+              <button
+                onClick={() => setChartViewMode(chartViewMode === "bar" ? "area" : "bar")}
+                className="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-900 font-extrabold rounded-lg border border-slate-300 transition-colors"
+              >
+                {chartViewMode === "bar" ? "Area Flow" : "Bar View"}
+              </button>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="h-72 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData} barGap={8} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={true} vertical={false} />
-                  <XAxis dataKey="month" stroke="#ffffff30" fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                  <YAxis stroke="#ffffff30" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`} />
+                {chartViewMode === "bar" ? (
+                  <BarChart data={movementTrends} barGap={4} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="month" stroke="#334155" fontSize={12} fontWeight="bold" tickLine={false} axisLine={false} />
+                    <YAxis stroke="#334155" fontSize={12} fontWeight="bold" tickLine={false} axisLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#ffffff",
+                        borderColor: "#cbd5e1",
+                        borderRadius: "12px",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        color: "#0f172a"
+                      }}
+                    />
+                    <Bar
+                      dataKey="inward"
+                      name="Inward Files"
+                      fill="#1e3a8a"
+                      radius={[4, 4, 0, 0]}
+                      isAnimationActive={true}
+                      animationDuration={1000}
+                    />
+                    <Bar
+                      dataKey="outward"
+                      name="Outward Files"
+                      fill="#0284c7"
+                      radius={[4, 4, 0, 0]}
+                      isAnimationActive={true}
+                      animationDuration={1200}
+                    />
+                  </BarChart>
+                ) : (
+                  <AreaChart data={movementTrends} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="month" stroke="#334155" fontSize={12} fontWeight="bold" tickLine={false} axisLine={false} />
+                    <YAxis stroke="#334155" fontSize={12} fontWeight="bold" tickLine={false} axisLine={false} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#ffffff",
+                        borderColor: "#cbd5e1",
+                        borderRadius: "12px",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        color: "#0f172a"
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="inward"
+                      name="Inward Files"
+                      stroke="#1e3a8a"
+                      strokeWidth={3}
+                      fill="#1e3a8a"
+                      fillOpacity={0.2}
+                      isAnimationActive={true}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="outward"
+                      name="Outward Files"
+                      stroke="#0284c7"
+                      strokeWidth={3}
+                      fill="#0284c7"
+                      fillOpacity={0.2}
+                      isAnimationActive={true}
+                    />
+                  </AreaChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* CHART 2: CATEGORY SHARE DONUT */}
+        <Card className="bg-white border-slate-200 shadow-sm rounded-2xl flex flex-col">
+          <CardHeader className="pb-3 border-b border-slate-200">
+            <CardTitle className="text-base font-black text-[#1e3a8a] flex items-center gap-2">
+              <PieIcon className="w-5 h-5 text-[#1e3a8a]" />
+              Category Share Breakdown
+            </CardTitle>
+            <p className="text-xs text-slate-600 font-semibold">
+              Volume distribution across categories
+            </p>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col items-center justify-center pt-4">
+            <div className="h-52 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryBreakdown}
+                    dataKey="count"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    isAnimationActive={true}
+                    animationDuration={1200}
+                  >
+                    {categoryBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
                   <Tooltip
-                    cursor={{ fill: '#ffffff03' }}
-                    contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.8)', backdropFilter: 'blur(10px)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '16px', padding: '12px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
-                    itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
-                    labelStyle={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}
-                    formatter={(v: number) => [`${formatCurrency(v)}`, '']}
-                  />
-                  <Bar 
-                    dataKey="income" 
-                    fill="#3b82f6" 
-                    radius={[4, 4, 0, 0]} 
-                    maxBarSize={32} 
-                    cursor="pointer"
-                    onClick={(data) => {
-                      if (data && data.month && data.income) {
-                        setSelectedBarData({
-                          month: data.month,
-                          type: 'Income',
-                          amount: data.income,
-                          items: generateMockBreakdown(data.income, 'Income', data.month)
-                        });
-                      }
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      borderColor: "#cbd5e1",
+                      borderRadius: "12px",
+                      boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      color: "#0f172a"
                     }}
+                    formatter={(val: number) => [`${val.toLocaleString()} files`, "Volume"]}
                   />
-                  <Bar 
-                    dataKey="expenses" 
-                    fill="#f97316" 
-                    radius={[4, 4, 0, 0]} 
-                    maxBarSize={32} 
-                    cursor="pointer"
-                    onClick={(data) => {
-                      if (data && data.month && data.expenses) {
-                        setSelectedBarData({
-                          month: data.month,
-                          type: 'Expense',
-                          amount: data.expenses,
-                          items: generateMockBreakdown(data.expenses, 'Expense', data.month)
-                        });
-                      }
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Compact Legend */}
+            <div className="w-full mt-2 grid grid-cols-2 gap-2 text-xs">
+              {categoryBreakdown.slice(0, 6).map((cat) => (
+                <div
+                  key={cat.name}
+                  onClick={() => handleOpenDrilldown("category", cat.name, cat.name)}
+                  className="flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer border border-transparent hover:border-slate-300 transition-all"
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                    <span className="truncate font-extrabold text-slate-800">{cat.name}</span>
+                  </span>
+                  <span className="font-mono font-black text-[#1e3a8a]">{cat.count.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════════════
+          4. CATEGORY-WISE IN-DEPTH CARDS ("har category ki file bataye")
+      ══════════════════════════════════════════════════════════════════════════════ */}
+      <Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
+        <CardHeader className="pb-3 border-b border-slate-200 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-black text-[#1e3a8a] flex items-center gap-2">
+              <Layers className="w-5 h-5 text-[#1e3a8a]" />
+              All Category Files & Financial Analysis
+            </CardTitle>
+            <p className="text-xs text-slate-600 font-semibold mt-0.5">
+              Exact number of files and total financial amount for every single category
+            </p>
+          </div>
+          <span className="text-xs font-black bg-blue-50 text-[#1e3a8a] px-3 py-1 rounded-full border border-blue-200">
+            {categoryBreakdown.length} Categories ({stats.totalFiles.toLocaleString()} Files)
+          </span>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categoryBreakdown.map((cat) => (
+              <motion.div
+                key={cat.name}
+                whileHover={{ y: -3 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => handleOpenDrilldown("category", cat.name, cat.name)}
+                className="bg-slate-50 hover:bg-white border border-slate-200 hover:border-[#1e3a8a] p-4 rounded-xl shadow-xs hover:shadow-md transition-all cursor-pointer group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-4 h-4 rounded-md" style={{ backgroundColor: cat.color }} />
+                    <h3 className="font-black text-sm text-slate-900 group-hover:text-[#1e3a8a] transition-colors">
+                      {cat.name}
+                    </h3>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-[#1e3a8a] group-hover:translate-x-0.5 transition-all" />
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
+                  <div>
+                    <span className="text-[11px] font-extrabold uppercase text-slate-600 block">Total Files</span>
+                    <span className="text-xl font-black text-[#1e3a8a]">{cat.count.toLocaleString()}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] font-extrabold uppercase text-slate-600 block">Share of Total</span>
+                    <span className="text-xl font-black text-slate-900">{cat.percentage}%</span>
+                  </div>
+                </div>
+
+                <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
+                  <span className="text-slate-700 font-bold">Total Amount:</span>
+                  <span className="font-mono font-black text-slate-900">{formatCurrency(cat.totalAmount)}</span>
+                </div>
+
+                {/* Subcategory Pills */}
+                {Object.keys(cat.subCats).length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-1">
+                    {Object.entries(cat.subCats).slice(0, 3).map(([sub, count]) => (
+                      <span key={sub} className="text-[10px] font-bold bg-white border border-slate-200 px-2 py-0.5 rounded-md text-slate-800">
+                        {sub}: <strong className="text-[#1e3a8a]">{count.toLocaleString()}</strong>
+                      </span>
+                    ))}
+                    {Object.keys(cat.subCats).length > 3 && (
+                      <span className="text-[10px] text-slate-500 px-1 py-0.5 font-bold">
+                        +{Object.keys(cat.subCats).length - 3} more
+                      </span>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ══════════════════════════════════════════════════════════════════════════════
+          5. SECTION-WISE WORKLOAD ("jis section me jitni files gain hai wo bhi bataye")
+      ══════════════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* HORIZONTAL BAR CHART - SECTION WORKLOAD */}
+        <Card className="bg-white border-slate-200 shadow-sm rounded-2xl flex flex-col">
+          <CardHeader className="pb-3 border-b border-slate-200 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-black text-[#1e3a8a] flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-[#1e3a8a]" />
+                Section-wise File Workload Ranking
+              </CardTitle>
+              <p className="text-xs text-slate-600 font-semibold mt-0.5">
+                Exact files received and held per department
+              </p>
+            </div>
+            <span className="text-xs font-black text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+              Top 10 Sections
+            </span>
+          </CardHeader>
+          <CardContent className="flex-1 pt-6">
+            <div className="h-96 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={sectionBreakdown.slice(0, 10)}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 35, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                  <XAxis type="number" stroke="#334155" fontSize={11} fontWeight="bold" tickLine={false} axisLine={false} />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    stroke="#1e3a8a"
+                    fontSize={11}
+                    fontWeight="bold"
+                    tickLine={false}
+                    axisLine={false}
+                    width={125}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#ffffff",
+                      borderColor: "#cbd5e1",
+                      borderRadius: "12px",
+                      boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                      fontSize: "12px",
+                      fontWeight: "bold",
+                      color: "#0f172a"
                     }}
+                    formatter={(val: number) => [`${val.toLocaleString()} files`, "Files Assigned"]}
+                  />
+                  <Bar
+                    dataKey="files"
+                    fill="#1e3a8a"
+                    radius={[0, 6, 6, 0]}
+                    isAnimationActive={true}
+                    animationDuration={1100}
                   />
                 </BarChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          </motion.div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* ACCOUNTS (RIGHT COLUMN) */}
-          <motion.div variants={item} className="h-full w-full flex flex-col">
-            <Card className="border-white/10 bg-[#09090b]/50 backdrop-blur-md flex flex-col min-h-[400px] flex-1 hover:border-white/20 transition-colors shadow-lg">
-            <CardHeader className="pb-2 border-b border-white/5">
-              <CardTitle className="text-sm font-black flex items-center justify-between text-white">
-                <div className="flex items-center gap-2">
-                  <Landmark className="w-4 h-4 text-emerald-400" />
-                  Active Bank Balances
-                </div>
+        {/* SECTION WORKLOAD TABLE */}
+        <Card className="bg-white border-slate-200 shadow-sm rounded-2xl flex flex-col">
+          <CardHeader className="pb-3 border-b border-slate-200 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-base font-black text-[#1e3a8a] flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#1e3a8a]" />
+                Section File Distribution Table
               </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 pt-6">
-              {bankAccounts.map((bank) => (
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} key={bank.id} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.08] hover:border-white/[0.2] transition-all cursor-default group shadow-sm">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white/5 border border-white/10 overflow-hidden relative">
-                      <div className="absolute inset-0 opacity-20" style={{ backgroundColor: bank.color }}></div>
-                      <span className="font-bold text-xs relative z-10" style={{ color: bank.color }}>{bank.bankName.charAt(0)}</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-white/90 group-hover:text-white transition-colors">{bank.bankName}</p>
-                      <p className="text-[10px] font-mono text-white/40 mt-0.5">{bank.maskedNumber}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm font-bold font-mono text-white tracking-tight">
-                    {formatCurrency(bank.balance, bank.currency)}
-                  </p>
-                </motion.div>
-              ))}
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* NET FLOW (FULL WIDTH) */}
-          <motion.div variants={item} className="col-span-1 lg:col-span-2 h-full w-full flex flex-col">
-            <Card className="border-white/10 bg-[#09090b]/50 backdrop-blur-md flex flex-col min-h-[300px] flex-1 hover:border-white/20 transition-colors shadow-lg">
-            <CardHeader className="pb-2 border-b border-white/5">
-              <CardTitle className="text-sm font-black flex items-center justify-between text-white">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-sky-400" />
-                  Monthly Net Flow
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 w-full min-h-[300px] pt-6">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={monthlyData.map(m => ({ ...m, net: m.income - m.expenses }))} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorNetBento" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#38bdf8" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#38bdf8" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                  <XAxis dataKey="month" stroke="#ffffff40" fontSize={10} tickLine={false} axisLine={false} dy={10} />
-                  <YAxis stroke="#ffffff40" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', borderColor: 'rgba(255,255,255,0.1)', borderRadius: '12px' }} 
-                    itemStyle={{ fontSize: '11px', color: '#38bdf8', fontWeight: 'bold' }}
-                    labelStyle={{ fontSize: '9px', color: 'rgba(255,255,255,0.5)', marginBottom: '2px' }}
-                    formatter={(v: number) => [`${formatCurrency(v)}`, 'Net']} 
-                  />
-                  <Area type="monotone" dataKey="net" stroke="#38bdf8" strokeWidth={3} fillOpacity={1} fill="url(#colorNetBento)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-          {/* TRANSACTIONS TABLE (FULL WIDTH) */}
-          <motion.div variants={item} className="col-span-1 lg:col-span-2 h-full w-full flex flex-col">
-            <Card className="border-white/10 bg-[#09090b]/50 backdrop-blur-md flex flex-col flex-1 hover:border-white/20 transition-colors shadow-lg">
-            <CardHeader className="pb-2 border-b border-white/5">
-              <CardTitle className="text-sm font-black flex items-center justify-between text-white">
-                <div className="flex items-center gap-2">
-                  <List className="w-4 h-4 text-rose-400" />
-                  Recent Activity
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="overflow-x-auto pt-4">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr>
-                    <th className="text-left pb-4 font-medium text-[10px] uppercase tracking-widest text-white/30">Date</th>
-                    <th className="text-left pb-4 font-medium text-[10px] uppercase tracking-widest text-white/30">Transaction</th>
-                    <th className="text-right pb-4 font-medium text-[10px] uppercase tracking-widest text-white/30">Amount</th>
-                    <th className="text-center pb-4 font-medium text-[10px] uppercase tracking-widest text-white/30">Status</th>
+              <p className="text-xs text-slate-600 font-semibold mt-0.5">
+                Detailed file breakdown across all active departments
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 p-0 overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-100 text-slate-700 font-black uppercase tracking-wider text-[11px] border-b border-slate-200">
+                <tr>
+                  <th className="py-3 px-4">Section / Department</th>
+                  <th className="py-3 px-3 text-center">Files In</th>
+                  <th className="py-3 px-3 text-center">Dispatched</th>
+                  <th className="py-3 px-3 text-right">Amount (PKR)</th>
+                  <th className="py-3 px-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sectionBreakdown.slice(0, 10).map((sec) => (
+                  <tr key={sec.name} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3 px-4 font-black text-slate-900">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: sec.color }} />
+                        <span className="truncate max-w-[140px] sm:max-w-none">{sec.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-center font-black font-mono text-[#1e3a8a]">
+                      {sec.files.toLocaleString()}
+                    </td>
+                    <td className="py-3 px-3 text-center font-black font-mono text-sky-800">
+                      {sec.outwardCount.toLocaleString()}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
+                      {formatCurrency(sec.totalAmount)}
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      <button
+                        onClick={() => handleOpenDrilldown("section", sec.name, sec.name)}
+                        className="p-1.5 rounded-lg text-[#1e3a8a] bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+                        title="View Files"
+                      >
+                        <Eye className="w-4 h-4 text-[#1e3a8a]" />
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.05]">
-                  {transactions.slice(0, 5).map((t) => (
-                    <tr key={t.id} className="group hover:bg-white/[0.02] transition-colors">
-                      <td className="py-4 pr-4 font-mono text-xs text-white/50 whitespace-nowrap">{t.date}</td>
-                      <td className="py-4 pr-4">
-                        <div className="flex items-center gap-3">
-                          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center shrink-0 border", 
-                            t.type === 'credit' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20")}>
-                            {t.type === 'credit' ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-white/90 text-xs">{t.description}</p>
-                            <p className="text-[10px] text-white/40 mt-0.5">{t.bankName}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className={cn("py-4 pr-4 text-right font-mono font-bold tracking-tight", t.type === 'credit' ? "text-emerald-400" : "text-rose-400")}>
-                        {t.type === 'credit' ? '+' : '-'}{formatCurrency(t.amount)}
-                      </td>
-                      <td className="py-4 text-center">
-                        <span className={cn(
-                          "text-[9px] px-2.5 py-1 rounded-full font-bold uppercase tracking-widest border",
-                          t.status === 'reconciled' && "bg-sky-500/10 text-sky-400 border-sky-500/20",
-                          t.status === 'approved' && "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-                          t.status === 'pending' && "bg-amber-500/10 text-amber-400 border-amber-500/20",
-                        )}>
-                          {t.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-          </motion.div>
-
-        </motion.div>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
       </div>
 
-      <Dialog open={!!selectedBarData} onOpenChange={() => setSelectedBarData(null)}>
-        <DialogContent className="max-w-2xl bg-[#09090b] border-white/10 text-white">
+      {/* ══════════════════════════════════════════════════════════════════════════════
+          6. RECENT ACTIVITY STREAM (Live File Stream)
+      ══════════════════════════════════════════════════════════════════════════════ */}
+      <Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
+        <CardHeader className="pb-3 border-b border-slate-200 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-black text-[#1e3a8a] flex items-center gap-2">
+              <Clock className="w-5 h-5 text-[#1e3a8a]" />
+              Recent File Activity & Movement Stream
+            </CardTitle>
+            <p className="text-xs text-slate-600 font-semibold mt-0.5">
+              Live updates of latest files registered and tracked in the KW&SC system
+            </p>
+          </div>
+          <span className="text-xs font-black bg-slate-100 text-slate-700 px-3 py-1 rounded-full border border-slate-200">
+            Showing latest {Math.min(10, filteredRecords.length)} files
+          </span>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-100 text-slate-700 font-black uppercase tracking-wider text-[11px] border-b border-slate-200">
+              <tr>
+                <th className="py-3.5 px-4">Diary No / Ref</th>
+                <th className="py-3.5 px-3">Subject / Purpose</th>
+                <th className="py-3.5 px-3">Category</th>
+                <th className="py-3.5 px-3">Mark To (Section)</th>
+                <th className="py-3.5 px-3">Inward Date</th>
+                <th className="py-3.5 px-3">Outward Date</th>
+                <th className="py-3.5 px-4 text-right">Amount (PKR)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredRecords.slice(0, 10).map((r) => (
+                <tr key={r.id || r.cfo_diary_number} className="hover:bg-slate-50 transition-colors">
+                  <td className="py-3.5 px-4">
+                    <span className="font-mono font-black text-[#1e3a8a] block">
+                      {r.cfo_diary_number || "---"}
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-500 font-bold block">
+                      {r.receiving_number || ""}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-3 max-w-[220px] truncate text-slate-900 font-bold">
+                    {r.subject || "No subject specified"}
+                  </td>
+                  <td className="py-3.5 px-3">
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-blue-50 text-[#1e3a8a] border border-blue-200">
+                      {r.main_category || "General"}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-3 font-extrabold text-slate-800">
+                    {r.mark_to || "---"}
+                  </td>
+                  <td className="py-3.5 px-3 font-mono font-bold text-slate-700">
+                    {r.inward_date || "---"}
+                  </td>
+                  <td className="py-3.5 px-3 font-mono font-bold">
+                    {r.mark_to === "exited" || (r.outward_date && r.inward_date && r.outward_date !== r.inward_date) ? (
+                      <span className="text-sky-800 font-black">{r.outward_date}</span>
+                    ) : (
+                      <span className="text-amber-800 font-bold text-[11px] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">In Section</span>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono font-black text-slate-900">
+                    {r.amount ? formatCurrency(r.amount) : "---"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      {/* ══════════════════════════════════════════════════════════════════════════════
+          7. DRILLDOWN MODAL
+      ══════════════════════════════════════════════════════════════════════════════ */}
+      <Dialog open={!!drilldownModal} onOpenChange={() => setDrilldownModal(null)}>
+        <DialogContent className="max-w-4xl bg-white border-slate-200 text-slate-900 rounded-2xl shadow-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-sky-400" />
-              {selectedBarData?.month} {selectedBarData?.type} Breakdown
+            <DialogTitle className="text-xl font-black text-[#1e3a8a] flex items-center justify-between border-b border-slate-200 pb-3">
+              <span className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-[#1e3a8a]" />
+                {drilldownModal?.title} ({drilldownModal?.items.length.toLocaleString()} Files)
+              </span>
             </DialogTitle>
           </DialogHeader>
-          <div className="mt-4">
-            <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10 mb-6">
-              <span className="text-sm text-white/60 uppercase tracking-widest">Total {selectedBarData?.type}</span>
-              <span className={cn("text-2xl font-bold", selectedBarData?.type === 'Income' ? 'text-blue-400' : 'text-orange-400')}>
-                {selectedBarData?.amount ? formatCurrency(selectedBarData.amount) : '0'}
-              </span>
+
+          <div className="mt-4 space-y-4">
+            <div className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <div>
+                <span className="text-xs uppercase font-extrabold text-slate-600 block">Total Files in View</span>
+                <span className="text-2xl font-black text-[#1e3a8a]">
+                  {drilldownModal?.items.length.toLocaleString()}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-xs uppercase font-extrabold text-slate-600 block">Total Financial Amount</span>
+                <span className="text-2xl font-black text-slate-900 font-mono">
+                  {formatCurrency(
+                    drilldownModal?.items.reduce((s, i) => s + (Number(i.amount) || 0), 0) || 0
+                  )}
+                </span>
+              </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs uppercase bg-white/5 text-white/50 border-b border-white/10">
+            <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-xl custom-scrollbar">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-slate-700 font-black uppercase sticky top-0 border-b border-slate-200 text-[10px]">
                   <tr>
-                    <th className="px-4 py-3 rounded-tl-lg">Date</th>
-                    <th className="px-4 py-3">Reference No</th>
-                    <th className="px-4 py-3">Description</th>
-                    <th className="px-4 py-3 text-right rounded-tr-lg">Amount</th>
+                    <th className="py-2.5 px-3">Diary No</th>
+                    <th className="py-2.5 px-3">Subject</th>
+                    <th className="py-2.5 px-3">Section</th>
+                    <th className="py-2.5 px-3">Inward Date</th>
+                    <th className="py-2.5 px-3 text-right">Amount</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {selectedBarData?.items.map((item, idx) => (
-                    <tr key={item.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                      <td className="px-4 py-3 text-white/70">{item.date}</td>
-                      <td className="px-4 py-3 font-mono text-white/50 text-xs">{item.ref}</td>
-                      <td className="px-4 py-3 text-white/90">{item.description}</td>
-                      <td className="px-4 py-3 text-right font-medium">{formatCurrency(item.amount)}</td>
+                <tbody className="divide-y divide-slate-100">
+                  {drilldownModal?.items.slice(0, 50).map((item) => (
+                    <tr key={item.id || item.cfo_diary_number} className="hover:bg-slate-50">
+                      <td className="py-2.5 px-3 font-mono font-black text-[#1e3a8a]">
+                        {item.cfo_diary_number || "---"}
+                      </td>
+                      <td className="py-2.5 px-3 max-w-[200px] truncate text-slate-800 font-bold">
+                        {item.subject || "---"}
+                      </td>
+                      <td className="py-2.5 px-3 font-bold text-slate-700">
+                        {item.mark_to || "---"}
+                      </td>
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-600">
+                        {item.inward_date || "---"}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900">
+                        {item.amount ? formatCurrency(item.amount) : "---"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -330,6 +1186,7 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

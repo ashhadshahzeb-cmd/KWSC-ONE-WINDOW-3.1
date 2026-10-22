@@ -4,10 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { LogIn, UserPlus, Mail, Lock, User as UserIcon, Loader2, ArrowLeft } from 'lucide-react';
+import { LogIn, UserPlus, Mail, Lock, User as UserIcon, Loader2, ArrowLeft, Shield, FileText, BarChart3, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import ThreeDLoginBackground from '@/components/auth/ThreeDLoginBackground';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAppConfig } from '@/hooks/useAppConfig';
 
@@ -58,15 +57,12 @@ export default function AuthPage() {
                if (mfaData.currentLevel === 'aal1') {
                   const { data: factors } = await supabase.auth.mfa.listFactors();
                   
-                  // Get the first available TOTP factor (verified or unverified)
                   const totpFactors = factors?.all?.filter(f => f.factor_type === 'totp') || [];
                   if (totpFactors.length > 0) {
                      setFactorId(totpFactors[0].id);
                      
-                     // If it is unverified, technically they should be enrolling, but since they have the code, we let them verify.
                      if (totpFactors[0].status === 'unverified') {
-                        setMfaStep('enroll'); // Show Verify box but keeping step conceptually for UI
-                        // But wait, if they refreshed, they don't have qrCodeData. The UI will just hide the QR and show the box.
+                        setMfaStep('enroll');
                      } else {
                         setMfaStep('verify');
                      }
@@ -76,16 +72,14 @@ export default function AuthPage() {
                      return;
                   }
                   
-                  setMfaStep('verify'); // Always show verify box
+                  setMfaStep('verify');
                   setLoading(false);
                   return;
                } else {
-                  // Already aal2
                   toast.success('Welcome! Login successful.');
                   navigate('/dashboard');
                }
             } else {
-                 // Not enrolled or has unverified factor, let's enroll them
                  const { data: existingFactors } = await supabase.auth.mfa.listFactors();
                  const unverifiedFactors = existingFactors?.all?.filter(f => f.status === 'unverified') || [];
                  if (unverifiedFactors.length > 0) {
@@ -102,12 +96,11 @@ export default function AuthPage() {
                     return;
                  }
                  setFactorId(data.id);
-                 setQrCodeData(data.totp.uri); // MUST BE URI for QRCodeSVG
+                 setQrCodeData(data.totp.uri);
                  setLoading(false);
                  return;
             }
           } else {
-            // HRMS Fallback
             toast.success('Welcome! Login successful.');
             navigate('/dashboard');
           }
@@ -203,17 +196,24 @@ export default function AuthPage() {
     visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
   };
 
+  const features = [
+    { icon: FileText, title: 'File Tracking', desc: 'Track inward & outward files across all departments' },
+    { icon: BarChart3, title: 'Financial Analytics', desc: 'Real-time budget monitoring and expenditure reports' },
+    { icon: Users, title: 'HRMS Integration', desc: 'Employee management, attendance & payroll system' },
+    { icon: Shield, title: 'Secure Access', desc: 'Role-based access control with 2FA authentication' },
+  ];
+
   return (
-    <div className="min-h-screen w-full flex bg-slate-950 overflow-hidden">
+    <div className="min-h-screen w-full flex bg-white overflow-hidden">
       
       {/* Left Side: Form Container */}
-      <div className="w-full lg:w-[45%] flex flex-col relative z-10 bg-slate-950/80 backdrop-blur-xl border-r border-white/5 shadow-2xl">
+      <div className="w-full lg:w-[48%] flex flex-col relative z-10 bg-white">
         
         {/* Back Button */}
-        <div className="absolute top-6 left-6 md:top-10 md:left-10">
+        <div className="absolute top-6 left-6 md:top-8 md:left-8">
           <Button 
             variant="ghost" 
-            className="text-slate-400 hover:text-white hover:bg-white/5"
+            className="text-slate-500 hover:text-[#1e3a8a] hover:bg-blue-50"
             onClick={() => navigate('/')}
           >
             <ArrowLeft className="w-5 h-5 mr-2" />
@@ -230,17 +230,17 @@ export default function AuthPage() {
           >
             {/* Header */}
             <motion.div variants={itemVariants} className="mb-10">
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-8">
                 <img src="/kwsc-logo.png" alt="KWSC" className="w-12 h-12 object-contain" />
                 <div className="flex flex-col">
-                  <span className="text-2xl font-black text-white leading-tight tracking-tight">KW&SC</span>
-                  <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Portal</span>
+                  <span className="text-2xl font-black text-[#1e3a8a] leading-tight tracking-tight">KW&SC</span>
+                  <span className="text-xs font-bold text-[#1e3a8a]/60 uppercase tracking-widest">One Window Portal</span>
                 </div>
               </div>
-              <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-3">
+              <h1 className="text-4xl sm:text-5xl font-black text-[#1e3a8a] tracking-tight mb-3">
                 {mfaStep !== 'none' ? 'Two-Factor Auth' : isLogin ? 'Welcome Back' : 'Create Account'}
               </h1>
-              <p className="text-slate-400 text-lg">
+              <p className="text-slate-500 text-lg">
                 {mfaStep === 'enroll' 
                   ? 'Scan the QR code with your Authenticator app' 
                   : mfaStep === 'verify'
@@ -255,19 +255,19 @@ export default function AuthPage() {
             {mfaStep !== 'none' ? (
               <form onSubmit={handleMfaVerify} className="space-y-5">
                 {mfaStep === 'enroll' && qrCodeData && (
-                  <motion.div variants={itemVariants} className="flex flex-col items-center justify-center p-6 bg-white rounded-xl mb-6 w-fit mx-auto">
+                  <motion.div variants={itemVariants} className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200 rounded-2xl mb-6 w-fit mx-auto">
                     <QRCodeSVG value={qrCodeData} size={200} />
                   </motion.div>
                 )}
                 
                 <motion.div variants={itemVariants} className="space-y-1.5">
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[#1e3a8a] transition-colors" />
                     <Input 
                       id="mfaCode" 
                       type="text" 
                       placeholder="6-digit Authenticator Code"
-                      className="pl-12 h-14 bg-white/[0.03] border-white/10 text-white placeholder:text-slate-500 focus-visible:ring-blue-500/50 focus-visible:border-blue-500/50 rounded-xl transition-all text-base text-center tracking-widest text-2xl font-mono" 
+                      className="pl-12 h-14 bg-slate-50 border-slate-200 text-[#1e3a8a] placeholder:text-slate-400 focus-visible:ring-[#1e3a8a]/30 focus-visible:border-[#1e3a8a]/50 rounded-xl transition-all text-base text-center tracking-widest text-2xl font-mono" 
                       required 
                       value={mfaCode}
                       onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -277,7 +277,7 @@ export default function AuthPage() {
 
                 <motion.div variants={itemVariants} className="pt-2">
                   <Button 
-                    className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-xl shadow-xl shadow-blue-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]" 
+                    className="w-full h-14 bg-[#1e3a8a] hover:bg-[#172554] text-white text-lg font-bold rounded-xl shadow-lg shadow-blue-900/15 transition-all hover:scale-[1.02] active:scale-[0.98]" 
                     disabled={loading || mfaCode.length < 6}
                   >
                     {loading ? (
@@ -293,7 +293,7 @@ export default function AuthPage() {
                    <button 
                      type="button"
                      onClick={() => setMfaStep('none')}
-                     className="text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                     className="text-sm font-medium text-slate-400 hover:text-[#1e3a8a] transition-colors"
                    >
                      Cancel & Return to Login
                    </button>
@@ -312,11 +312,11 @@ export default function AuthPage() {
                       className="space-y-1.5"
                     >
                       <div className="relative group">
-                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[#1e3a8a] transition-colors" />
                         <Input 
                           id="name" 
                           placeholder="Full Name" 
-                          className="pl-12 h-14 bg-white/[0.03] border-white/10 text-white placeholder:text-slate-500 focus-visible:ring-blue-500/50 focus-visible:border-blue-500/50 rounded-xl transition-all text-base" 
+                          className="pl-12 h-14 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-[#1e3a8a]/30 focus-visible:border-[#1e3a8a]/50 rounded-xl transition-all text-base" 
                           required={!isLogin}
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
@@ -328,12 +328,12 @@ export default function AuthPage() {
 
                 <motion.div variants={itemVariants} className="space-y-1.5">
                   <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[#1e3a8a] transition-colors" />
                     <Input 
                       id="email" 
                       type="email" 
                       placeholder="Email Address" 
-                      className="pl-12 h-14 bg-white/[0.03] border-white/10 text-white placeholder:text-slate-500 focus-visible:ring-blue-500/50 focus-visible:border-blue-500/50 rounded-xl transition-all text-base" 
+                      className="pl-12 h-14 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-[#1e3a8a]/30 focus-visible:border-[#1e3a8a]/50 rounded-xl transition-all text-base" 
                       required 
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -343,12 +343,12 @@ export default function AuthPage() {
 
                 <motion.div variants={itemVariants} className="space-y-1.5">
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[#1e3a8a] transition-colors" />
                     <Input 
                       id="password" 
                       type="password" 
                       placeholder="Password"
-                      className="pl-12 h-14 bg-white/[0.03] border-white/10 text-white placeholder:text-slate-500 focus-visible:ring-blue-500/50 focus-visible:border-blue-500/50 rounded-xl transition-all text-base" 
+                      className="pl-12 h-14 bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus-visible:ring-[#1e3a8a]/30 focus-visible:border-[#1e3a8a]/50 rounded-xl transition-all text-base" 
                       required 
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -356,7 +356,7 @@ export default function AuthPage() {
                   </div>
                   {isLogin && (
                     <div className="flex justify-end pt-2">
-                      <button type="button" onClick={handleForgotPassword} className="text-sm font-medium text-slate-400 hover:text-blue-400 transition-colors">
+                      <button type="button" onClick={handleForgotPassword} className="text-sm font-medium text-slate-400 hover:text-[#1e3a8a] transition-colors">
                         Forgot Password?
                       </button>
                     </div>
@@ -365,17 +365,18 @@ export default function AuthPage() {
 
                 <motion.div variants={itemVariants} className="pt-2">
                   <Button 
-                    className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-xl shadow-xl shadow-blue-900/20 transition-all hover:scale-[1.02] active:scale-[0.98]" 
+                    className="w-full h-14 bg-[#1e3a8a] hover:bg-[#172554] text-white text-lg font-bold rounded-xl shadow-lg shadow-blue-900/15 transition-all hover:scale-[1.02] active:scale-[0.98]" 
                     disabled={loading}
+                    style={{ color: '#ffffff' }}
                   >
                     {loading ? (
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" style={{ color: '#ffffff' }} />
                     ) : isLogin ? (
-                      <LogIn className="w-5 h-5 mr-2" />
+                      <LogIn className="w-5 h-5 mr-2" style={{ color: '#ffffff' }} />
                     ) : (
-                      <UserPlus className="w-5 h-5 mr-2" />
+                      <UserPlus className="w-5 h-5 mr-2" style={{ color: '#ffffff' }} />
                     )}
-                    {isLogin ? 'Access Portal' : 'Register Account'}
+                    <span style={{ color: '#ffffff' }}>{isLogin ? 'Access Portal' : 'Register Account'}</span>
                   </Button>
                 </motion.div>
               </form>
@@ -383,7 +384,7 @@ export default function AuthPage() {
 
             {mfaStep === 'none' && (
               <motion.div variants={itemVariants} className="mt-8 text-center">
-                <p className="text-base text-slate-400">
+                <p className="text-base text-slate-500">
                   {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
                   <button 
                     type="button" 
@@ -392,7 +393,7 @@ export default function AuthPage() {
                       setFullName('');
                       setPassword('');
                     }}
-                    className="font-bold text-blue-400 hover:text-blue-300 transition-colors hover:underline underline-offset-4"
+                    className="font-bold text-[#1e3a8a] hover:text-[#172554] transition-colors hover:underline underline-offset-4"
                   >
                     {isLogin ? 'Register' : 'Sign In'}
                   </button>
@@ -404,41 +405,80 @@ export default function AuthPage() {
         </div>
         
         {/* Footer Text */}
-        <div className="p-8 text-center text-sm text-slate-500 font-medium">
+        <div className="p-8 text-center text-sm text-slate-400 font-medium">
           &copy; {new Date().getFullYear()} Karachi Water & Sewerage Corporation
         </div>
       </div>
 
-      {/* Right Side: 3D Canvas Visuals */}
-      <div className="hidden lg:block lg:w-[55%] relative">
-        {/* Elegant Gradient Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-transparent to-transparent z-10 pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent z-10 pointer-events-none opacity-50" />
+      {/* Right Side: Brand Visual Panel */}
+      <div className="hidden lg:flex lg:w-[52%] relative bg-[#1e3a8a] flex-col justify-between items-center overflow-hidden py-10 px-8">
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-white/[0.03] rounded-full pointer-events-none" />
         
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-600/20 rounded-full blur-[120px] pointer-events-none z-10" />
-        
-        {/* The 3D Scene */}
-        <ThreeDLoginBackground />
-        
-        {/* Feature Text Overlay */}
-        <div className="absolute bottom-16 right-16 z-20 max-w-md text-right">
-          <motion.h2 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5, duration: 0.8 }}
-            className="text-3xl font-black text-white mb-2"
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }} />
+
+        {/* Content */}
+        <div className="relative z-10 w-full max-w-lg my-auto flex flex-col justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="text-center mb-8"
           >
-            Enterprise Intelligence
-          </motion.h2>
-          <motion.p 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            className="text-slate-300 text-lg"
-          >
-            Unifying File Tracking, Finance, and HRMS into a single robust portal.
-          </motion.p>
+            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm border border-white/20" style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)' }}>
+              <img src="/kwsc-logo.png" alt="KWSC" className="w-11 h-11 object-contain" />
+            </div>
+            <h2 className="text-3xl font-black mb-2 tracking-tight" style={{ color: '#ffffff' }}>
+              One Window Facility
+            </h2>
+            <p className="text-sm md:text-base leading-relaxed max-w-md mx-auto" style={{ color: '#dbeafe' }}>
+              Unified enterprise portal for File Tracking, Finance & HRMS management
+            </p>
+          </motion.div>
+
+          {/* Feature Cards */}
+          <div className="grid grid-cols-2 gap-3.5">
+            {features.map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 + index * 0.08, duration: 0.4 }}
+                className="rounded-xl p-3.5 border border-white/20 transition-all duration-200"
+                style={{ backgroundColor: 'rgba(23, 37, 84, 0.65)' }}
+              >
+                <feature.icon className="w-6 h-6 mb-2" strokeWidth={2} style={{ color: '#ffffff' }} />
+                <h3 className="font-bold text-sm mb-1" style={{ color: '#ffffff' }}>{feature.title}</h3>
+                <p className="text-xs leading-relaxed" style={{ color: '#bfdbfe' }}>{feature.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
+
+        {/* Bottom stats bar */}
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.5 }}
+          className="relative z-10 w-full max-w-lg flex justify-around items-center pt-6 border-t border-white/20"
+        >
+          {[
+            { value: '12,000+', label: 'Files Tracked' },
+            { value: '50+', label: 'Departments' },
+            { value: '99.9%', label: 'Uptime' },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center">
+              <div className="text-xl md:text-2xl font-black tracking-tight" style={{ color: '#ffffff' }}>{stat.value}</div>
+              <div className="text-[10px] md:text-xs font-semibold uppercase tracking-wider mt-0.5" style={{ color: '#93c5fd' }}>{stat.label}</div>
+            </div>
+          ))}
+        </motion.div>
       </div>
 
     </div>
