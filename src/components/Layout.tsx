@@ -284,7 +284,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
-        <header className="flex h-16 items-center justify-between px-4 md:px-8 border-b border-slate-200 bg-white sticky top-0 z-20 shadow-sm">
+        <header className="flex h-16 items-center justify-between px-4 md:px-8 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-[#111827] sticky top-0 z-20 shadow-sm">
           <div className="flex items-center gap-2 md:gap-4">
             <div className="md:hidden">
               <Sheet>
@@ -386,7 +386,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f8fafc] text-slate-800 relative custom-scrollbar">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[#f8fafc] dark:bg-[#0f172a] text-slate-800 dark:text-slate-200 relative custom-scrollbar">
           <OfflineIndicator />
           <NotificationListener />
           <SpyListener />
@@ -407,7 +407,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 safe-area-pb">
-        <nav className="flex justify-around items-center bg-white border border-slate-200 rounded-3xl shadow-xl overflow-hidden">
+        <nav className="flex justify-around items-center bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-3xl shadow-xl overflow-hidden">
           {!isEmpOperator ? (
             <>
               <Link to="/" className="flex-1 relative">

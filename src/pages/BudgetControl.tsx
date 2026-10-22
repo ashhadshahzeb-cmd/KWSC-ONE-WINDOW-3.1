@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Wallet, TrendingDown, ArrowRight, Loader2, Pencil } from "lucide-react";
+import { Plus, Wallet, TrendingDown, ArrowRight, Loader2, Pencil, PiggyBank, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -156,29 +156,47 @@ export default function BudgetControl() {
   const globalPercentage = totalAllocated > 0 ? (totalUtilized / totalAllocated) * 100 : 0;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
-            <Wallet className="w-8 h-8 text-primary" />
-            Budget Control Center
-          </h1>
-          <p className="text-muted-foreground mt-1">Manage and track departmental budget allocations in real-time.</p>
+    <div className="w-full space-y-6 pb-16 font-sans">
+      
+      {/* ═══ HEADER TOOLBAR ═══ */}
+      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-[#1e3a8a] text-white flex items-center justify-center">
+              <Wallet className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-2xl md:text-3xl font-black text-[#1e3a8a] dark:text-blue-400 tracking-tight">
+                  Budget Control Center
+                </h1>
+                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[#1e3a8a] dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                  <BarChart3 className="w-3 h-3" /> Financial Control
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-0.5">
+                Manage and track departmental budget allocations in real-time
+              </p>
+            </div>
+          </div>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20" onClick={openNewDialog}>
+            <Button 
+              className="bg-[#1e3a8a] hover:bg-blue-900 text-white font-bold text-sm px-5 py-2.5 rounded-xl" 
+              onClick={openNewDialog}
+            >
               <Plus className="w-5 h-5 mr-2" /> Assign Budget
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-background border-border sm:max-w-2xl">
+          <DialogContent className="bg-white dark:bg-[#1e293b] border-slate-200 dark:border-slate-600 sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingBudgetId ? 'Edit Budget' : 'Assign Department Budget'}</DialogTitle>
+              <DialogTitle className="text-[#1e3a8a] dark:text-blue-300 font-black">{editingBudgetId ? 'Edit Budget' : 'Assign Department Budget'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAssignBudget} className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>Department / Section</Label>
+                <Label className="font-bold text-slate-700 dark:text-slate-300">Department / Section</Label>
                 <Select value={selectedSection} onValueChange={setSelectedSection} disabled={!!editingBudgetId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a department" />
@@ -193,7 +211,7 @@ export default function BudgetControl() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Period</Label>
+                  <Label className="font-bold text-slate-700 dark:text-slate-300">Period</Label>
                   <Select value={periodType} onValueChange={setPeriodType}>
                     <SelectTrigger>
                       <SelectValue />
@@ -205,13 +223,13 @@ export default function BudgetControl() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>Year/Month</Label>
+                  <Label className="font-bold text-slate-700 dark:text-slate-300">Year/Month</Label>
                   <Input value={periodValue} onChange={e => setPeriodValue(e.target.value)} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Allocated Amount (PKR)</Label>
+                <Label className="font-bold text-slate-700 dark:text-slate-300">Allocated Amount (PKR)</Label>
                 <Input 
                   type="number" 
                   min="0" 
@@ -222,7 +240,7 @@ export default function BudgetControl() {
                 />
               </div>
 
-              <Button type="submit" className="w-full font-bold" disabled={isAssigning}>
+              <Button type="submit" className="w-full font-bold bg-[#1e3a8a] hover:bg-blue-900 text-white" disabled={isAssigning}>
                 {isAssigning ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                 {editingBudgetId ? 'Update Budget' : 'Save Budget'}
               </Button>
@@ -231,65 +249,119 @@ export default function BudgetControl() {
         </Dialog>
       </div>
 
-      {/* Global Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-background/60 border-primary/20 shadow-xl shadow-primary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Allocated Budget</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-primary">Rs. {totalAllocated.toLocaleString()}</div>
+      {/* ═══ GLOBAL KPI OVERVIEW ═══ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        
+        {/* Total Allocated */}
+        <Card className="bg-white dark:bg-[#111827] border-slate-200 dark:border-slate-700 rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                Total Allocated Budget
+              </span>
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-[#1e3a8a] dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center justify-center font-bold">
+                <PiggyBank className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span
+                className="text-lg sm:text-xl lg:text-2xl font-black tracking-tight font-mono break-all leading-tight px-3 py-1 rounded-lg inline-block"
+                style={{ color: '#92400e', background: '#fef08a', border: '1.5px solid #fbbf24' }}
+              >
+                Rs. {totalAllocated.toLocaleString()}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 font-semibold">
+              Combined budget across all departments
+            </p>
           </CardContent>
         </Card>
         
-        <Card className="bg-background/60 border-border shadow-lg">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Utilized</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-expense flex items-center gap-2">
-              <TrendingDown className="w-5 h-5" />
-              Rs. {totalUtilized.toLocaleString()}
+        {/* Total Utilized */}
+        <Card className="bg-white dark:bg-[#111827] border-slate-200 dark:border-slate-700 rounded-2xl">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                Total Utilized
+              </span>
+              <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 flex items-center justify-center font-bold">
+                <TrendingDown className="w-5 h-5" />
+              </div>
             </div>
-            <Progress value={globalPercentage} className="h-1.5 mt-4" indicatorClassName="bg-expense" />
+            <div className="mt-3 flex items-baseline gap-2 flex-wrap">
+              <span className="text-2xl sm:text-3xl xl:text-4xl font-black text-red-600 dark:text-red-400 tracking-tight">
+                Rs. {totalUtilized.toLocaleString()}
+              </span>
+              <span className="text-[10px] sm:text-xs font-black text-red-800 dark:text-red-300 bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full border border-red-300 dark:border-red-700 whitespace-nowrap">
+                {globalPercentage.toFixed(1)}% Used
+              </span>
+            </div>
+            <Progress value={globalPercentage} className="h-1.5 mt-3" indicatorClassName="bg-red-500" />
+            <p className="mt-2 text-xs text-slate-600 dark:text-slate-400 font-semibold">
+              Total deductions against allocated budgets
+            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-background/60 border-border shadow-lg">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Remaining</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-white">Rs. {(totalAllocated - totalUtilized).toLocaleString()}</div>
+        {/* Total Remaining */}
+        <Card className="border-2 border-emerald-400 dark:border-emerald-600 rounded-2xl bg-emerald-50 dark:bg-emerald-900/15">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                Total Remaining
+              </span>
+              <div className="w-10 h-10 rounded-xl bg-emerald-400 dark:bg-emerald-600 flex items-center justify-center font-bold">
+                <Wallet className="w-5 h-5 text-white" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span
+                className="text-lg sm:text-xl lg:text-2xl font-black tracking-tight font-mono break-all leading-tight px-3 py-1 rounded-lg inline-block"
+                style={{ color: '#065f46', background: '#d1fae5', border: '1.5px solid #34d399' }}
+              >
+                Rs. {(totalAllocated - totalUtilized).toLocaleString()}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400 font-semibold">
+              Available balance across all departments
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Department Cards */}
+      {/* ═══ DEPARTMENT BREAKDOWNS ═══ */}
       <div className="space-y-4">
-        <h2 className="text-xl font-bold tracking-tight text-white mt-8 mb-4">Department Breakdowns</h2>
+        <h2 className="text-xl font-black tracking-tight text-[#1e3a8a] dark:text-blue-400 mt-4 mb-2 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5" />
+          Department Breakdowns
+        </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {validSections.map(section => {
             const stats = calculateSectionStats(section.config_key);
-            if (!stats.hasBudget && stats.utilized === 0) return null; // Hide if no budget and no usage
+            if (!stats.hasBudget && stats.utilized === 0) return null;
 
-            const progressColor = stats.percentage > 90 ? 'bg-red-500' : stats.percentage > 75 ? 'bg-orange-500' : 'bg-primary';
+            const isOverBudget = stats.percentage > 90;
+            const isWarning = stats.percentage > 75;
+            const progressColor = isOverBudget ? 'bg-red-500' : isWarning ? 'bg-orange-500' : 'bg-[#1e3a8a]';
+            const accentBorderColor = isOverBudget ? 'border-l-red-500' : isWarning ? 'border-l-orange-500' : 'border-l-[#1e3a8a]';
 
             return (
-              <Card key={section.config_key} className="bg-background border border-border/50 hover:border-primary/30 transition-all group overflow-hidden relative">
-                <div className={`absolute top-0 left-0 w-1 h-full ${progressColor}`} />
+              <Card 
+                key={section.config_key} 
+                className={`bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden border-l-4 ${accentBorderColor} hover:border-slate-300 dark:hover:border-slate-600 transition-all group`}
+              >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="text-lg font-bold">{section.config_label}</CardTitle>
-                      <CardDescription className="text-xs uppercase tracking-wider mt-1">{section.config_key}</CardDescription>
+                      <CardTitle className="text-base font-black text-slate-800 dark:text-slate-100">{section.config_label}</CardTitle>
+                      <CardDescription className="text-[10px] uppercase tracking-wider mt-0.5 font-bold text-slate-500 dark:text-slate-400">{section.config_key}</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        className="h-7 w-7 text-slate-500 dark:text-slate-400 hover:text-[#1e3a8a] dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
                         onClick={() => {
                           const existingBudget = budgets.find(b => b.section_key === section.config_key);
                           if (existingBudget) openEditDialog(existingBudget);
@@ -297,37 +369,57 @@ export default function BudgetControl() {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
-                      <Badge variant={stats.percentage > 90 ? "destructive" : "secondary"}>
+                      <Badge 
+                        className={
+                          isOverBudget 
+                            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 font-bold text-[10px]" 
+                            : isWarning
+                            ? "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-700 font-bold text-[10px]"
+                            : "bg-blue-50 dark:bg-blue-900/30 text-[#1e3a8a] dark:text-blue-300 border border-blue-200 dark:border-blue-800 font-bold text-[10px]"
+                        }
+                      >
                         {stats.percentage.toFixed(1)}% Used
                       </Badge>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 pt-2">
+                  <div className="grid grid-cols-2 gap-4 pt-1">
                     <div>
-                      <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider mb-1">Allocated</p>
-                      <p className="font-mono font-medium text-sm">Rs. {stats.allocated.toLocaleString()}</p>
+                      <p className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-extrabold tracking-wider mb-1">Allocated</p>
+                      <p
+                        className="font-mono font-bold text-sm px-2 py-0.5 rounded inline-block"
+                        style={{ color: '#92400e', background: '#fef08a', border: '1px solid #fbbf24' }}
+                      >
+                        Rs. {stats.allocated.toLocaleString()}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-wider mb-1">Remaining</p>
-                      <p className={`font-mono font-bold text-sm ${stats.remaining < 0 ? 'text-red-500' : 'text-primary'}`}>
+                      <p className="text-[10px] uppercase text-slate-500 dark:text-slate-400 font-extrabold tracking-wider mb-1">Remaining</p>
+                      <p
+                        className="font-mono font-bold text-sm px-2 py-0.5 rounded inline-block"
+                        style={
+                          stats.remaining < 0
+                            ? { color: '#991b1b', background: '#fecaca', border: '1px solid #f87171' }
+                            : { color: '#065f46', background: '#d1fae5', border: '1px solid #34d399' }
+                        }
+                      >
                         Rs. {stats.remaining.toLocaleString()}
                       </p>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-medium text-muted-foreground">
+                    <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
                       <span>Utilized</span>
-                      <span>Rs. {stats.utilized.toLocaleString()}</span>
+                      <span className="font-mono">Rs. {stats.utilized.toLocaleString()}</span>
                     </div>
                     <Progress value={stats.percentage} className="h-2" indicatorClassName={progressColor} />
                   </div>
 
                   <Button 
                     variant="ghost" 
-                    className="w-full mt-2 text-xs text-muted-foreground hover:text-white group-hover:bg-white/5"
+                    className="w-full mt-1 text-xs text-slate-600 dark:text-slate-400 hover:text-[#1e3a8a] dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-bold group-hover:bg-slate-50 dark:group-hover:bg-slate-800"
                     onClick={() => navigate(`/budget-details/${section.config_key}`)}
                   >
                     View File Deductions <ArrowRight className="w-3 h-3 ml-2 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
@@ -338,10 +430,10 @@ export default function BudgetControl() {
           })}
 
           {validSections.filter(s => !calculateSectionStats(s.config_key).hasBudget && calculateSectionStats(s.config_key).utilized === 0).length > 0 && (
-            <Card className="bg-background/20 border-dashed border-border/50 flex flex-col items-center justify-center text-center p-6 min-h-[200px]">
-              <Wallet className="w-10 h-10 text-muted-foreground/30 mb-3" />
-              <p className="text-sm text-muted-foreground font-medium">Other departments have no budget allocated yet.</p>
-              <Button variant="link" className="text-primary mt-1" onClick={openNewDialog}>Assign Budget</Button>
+            <Card className="bg-slate-50 dark:bg-[#111827] border-dashed border-2 border-slate-300 dark:border-slate-600 flex flex-col items-center justify-center text-center p-6 min-h-[200px] rounded-2xl">
+              <Wallet className="w-10 h-10 text-slate-400 dark:text-slate-500 mb-3" />
+              <p className="text-sm text-slate-600 dark:text-slate-400 font-bold">Other departments have no budget allocated yet.</p>
+              <Button variant="link" className="text-[#1e3a8a] dark:text-blue-400 mt-1 font-bold" onClick={openNewDialog}>Assign Budget</Button>
             </Card>
           )}
         </div>

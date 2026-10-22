@@ -92,89 +92,105 @@ export default function BudgetDetails() {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in pb-10">
-      <Button variant="ghost" className="mb-2 text-muted-foreground hover:text-white" onClick={() => navigate('/budget-control')}>
+    <div className="w-full space-y-6 pb-10 font-sans">
+      <Button 
+        variant="ghost" 
+        className="mb-2 text-slate-600 dark:text-slate-400 hover:text-[#1e3a8a] dark:hover:text-blue-400 font-bold" 
+        onClick={() => navigate('/budget-control')}
+      >
         <ArrowLeft className="w-4 h-4 mr-2" /> Back to Overview
       </Button>
 
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
-            {sectionName} Budget Details
-          </h1>
-          <p className="text-muted-foreground mt-1">Detailed view of all files impacting this department's budget.</p>
-        </div>
+      <div className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-2xl p-6">
+        <h1 className="text-2xl md:text-3xl font-black tracking-tight text-[#1e3a8a] dark:text-blue-400 flex items-center gap-3">
+          {sectionName} Budget Details
+        </h1>
+        <p className="text-xs text-slate-600 dark:text-slate-400 font-semibold mt-1">
+          Detailed view of all files impacting this department's budget.
+        </p>
       </div>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-background/60 border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Allocated</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-primary">Rs. {allocated.toLocaleString()}</div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-white dark:bg-[#111827] border-slate-200 dark:border-slate-700 rounded-2xl">
+          <CardContent className="p-5">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Allocated</span>
+            <div className="mt-2">
+              <span
+                className="text-lg font-black font-mono px-3 py-1 rounded-lg inline-block"
+                style={{ color: '#92400e', background: '#fef08a', border: '1.5px solid #fbbf24' }}
+              >
+                Rs. {allocated.toLocaleString()}
+              </span>
+            </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-background/60 border-border">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Utilized</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-black text-expense">Rs. {utilizedAmount.toLocaleString()}</div>
+        <Card className="bg-white dark:bg-[#111827] border-slate-200 dark:border-slate-700 rounded-2xl">
+          <CardContent className="p-5">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Utilized</span>
+            <div className="mt-2">
+              <span className="text-2xl font-black text-red-600 dark:text-red-400">Rs. {utilizedAmount.toLocaleString()}</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-background/60 border-border">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Remaining</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-3xl font-black ${remaining < 0 ? 'text-red-500' : 'text-white'}`}>
-              Rs. {remaining.toLocaleString()}
+        <Card className="bg-white dark:bg-[#111827] border-slate-200 dark:border-slate-700 rounded-2xl">
+          <CardContent className="p-5">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">Remaining</span>
+            <div className="mt-2">
+              <span
+                className="text-lg font-black font-mono px-3 py-1 rounded-lg inline-block"
+                style={
+                  remaining < 0
+                    ? { color: '#991b1b', background: '#fecaca', border: '1.5px solid #f87171' }
+                    : { color: '#065f46', background: '#d1fae5', border: '1.5px solid #34d399' }
+                }
+              >
+                Rs. {remaining.toLocaleString()}
+              </span>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* File Tracking Deductions Table */}
-      <Card className="bg-background border border-border shadow-xl">
+      <Card className="bg-white dark:bg-[#111827] border border-slate-200 dark:border-slate-700 rounded-2xl">
         <CardHeader className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
+            <CardTitle className="text-xl font-black flex items-center gap-2 text-[#1e3a8a] dark:text-blue-400">
+              <FileText className="w-5 h-5" />
               File Deductions Ledger
             </CardTitle>
-            <CardDescription>A chronological list of all files that deducted from this budget.</CardDescription>
+            <CardDescription className="text-slate-500 dark:text-slate-400 font-semibold">A chronological list of all files that deducted from this budget.</CardDescription>
           </div>
           
           <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
             <Input
               placeholder="Search diary no, subject..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-background/50"
+              className="pl-9"
             />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border border-border/50 overflow-hidden">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead className="w-[120px]">Date</TableHead>
-                  <TableHead>Diary / Receiving</TableHead>
-                  <TableHead>Subject / Payee</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Deducted Amount</TableHead>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-[#1e293b]">
+                  <TableHead className="w-[120px] font-extrabold text-slate-700 dark:text-slate-300">Date</TableHead>
+                  <TableHead className="font-extrabold text-slate-700 dark:text-slate-300">Diary / Receiving</TableHead>
+                  <TableHead className="font-extrabold text-slate-700 dark:text-slate-300">Subject / Payee</TableHead>
+                  <TableHead className="font-extrabold text-slate-700 dark:text-slate-300">Status</TableHead>
+                  <TableHead className="text-right font-extrabold text-slate-700 dark:text-slate-300">Deducted Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUtils.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="h-32 text-center text-slate-500 dark:text-slate-400 font-semibold">
                       No files have impacted this department's budget yet.
                     </TableCell>
                   </TableRow>
@@ -185,26 +201,42 @@ export default function BudgetDetails() {
                     const isAdjustment = util.status === 'Adjustment';
                     
                     return (
-                      <TableRow key={util.id} className="hover:bg-muted/30">
-                        <TableCell className="font-mono text-xs whitespace-nowrap">
+                      <TableRow key={util.id} className="hover:bg-slate-50 dark:hover:bg-[#1e293b]">
+                        <TableCell className="font-mono text-xs whitespace-nowrap text-slate-700 dark:text-slate-300">
                           {new Date(util.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          <div className="font-mono text-sm font-bold">{file.cfo_diary_number || 'N/A'}</div>
-                          <div className="text-xs text-muted-foreground">{file.receiving_number || 'N/A'}</div>
+                          <div className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200">{file.cfo_diary_number || 'N/A'}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{file.receiving_number || 'N/A'}</div>
                         </TableCell>
                         <TableCell>
-                          <div className="font-medium max-w-md truncate">{file.subject || 'Unknown Subject'}</div>
-                          <div className="text-xs text-muted-foreground">{file.received_from || 'Unknown Payee'}</div>
+                          <div className="font-bold max-w-md truncate text-slate-800 dark:text-slate-200">{file.subject || 'Unknown Subject'}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{file.received_from || 'Unknown Payee'}</div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={isReverted ? 'outline' : isAdjustment ? 'secondary' : 'default'} 
-                                 className={isReverted ? 'text-muted-foreground' : isAdjustment ? 'bg-blue-500/10 text-blue-500' : 'bg-expense/10 text-expense'}>
+                          <Badge 
+                            className={
+                              isReverted 
+                                ? 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600' 
+                                : isAdjustment 
+                                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-700' 
+                                : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-700'
+                            }
+                          >
                             {util.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className={`text-right font-mono font-bold ${isReverted ? 'text-muted-foreground line-through' : 'text-white'}`}>
-                          {Number(util.deducted_amount) > 0 ? '-' : '+'} Rs. {Math.abs(Number(util.deducted_amount)).toLocaleString()}
+                        <TableCell className="text-right">
+                          <span
+                            className={`font-mono font-bold ${isReverted ? 'text-slate-400 dark:text-slate-500 line-through' : ''}`}
+                            style={
+                              !isReverted
+                                ? { color: '#92400e', background: '#fef08a', border: '1px solid #fbbf24', padding: '2px 8px', borderRadius: '6px', display: 'inline-block' }
+                                : {}
+                            }
+                          >
+                            {Number(util.deducted_amount) > 0 ? '-' : '+'} Rs. {Math.abs(Number(util.deducted_amount)).toLocaleString()}
+                          </span>
                         </TableCell>
                       </TableRow>
                     );
