@@ -153,17 +153,19 @@ body:not(.dark):not(.landing-dark) {
 }
 
 html:not(.dark):not(.landing-dark) {
-  /* ─── 1. REMOVE ALL GRADIENTS (Project Branding: Flat #1e3a8a & White) ─── */
-  [class*="bg-gradient-"],
-  [class*="bg-gradient-to-"],
-  .bg-gradient-to-r,
-  .bg-gradient-to-br,
-  .bg-gradient-to-b,
-  .bg-gradient-to-t,
-  .bg-gradient-to-tr,
-  .bg-gradient-to-bl,
-  .bg-gradient-to-l {
+  /* ─── 1. REMOVE ALL GRADIENTS & SHADOWS (Strict Flat #1e3a8a & Pure White) ─── */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  [class*="gradient"],
+  [class*="bg-gradient"],
+  .stat-glow {
     background-image: none !important;
+    box-shadow: none !important;
   }
 
   /* Flatten gradient text into solid brand #1e3a8a */
@@ -420,8 +422,42 @@ html:not(.dark):not(.landing-dark) {
     color: #475569 !important;
   }
 
-  .hover\:text-white:hover {
+  /* Tabs: Flat Theme (Clean White & #1e3a8a, NO shadow, NO gradient) */
+  [role="tablist"] {
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+  }
+
+  [role="tab"],
+  button[role="tab"] {
+    color: #475569 !important;
+    box-shadow: none !important;
+    transition: all 0.15s ease-in-out;
+  }
+
+  [role="tab"]:hover,
+  button[role="tab"]:hover {
+    background-color: #f1f5f9 !important;
+    color: #1e3a8a !important;
+  }
+
+  [role="tab"][data-state="active"],
+  button[role="tab"][data-state="active"] {
+    background-color: #1e3a8a !important;
     color: #ffffff !important;
+    box-shadow: none !important;
+  }
+
+  [role="tab"][data-state="active"] *,
+  button[role="tab"][data-state="active"] * {
+    color: #ffffff !important;
+  }
+
+  /* Prevent text from disappearing on hover on white background */
+  button:hover:not([class*="bg-primary"]):not([class*="bg-[#1e3a8a]"]):not([class*="bg-blue"]):not([class*="hover:bg-primary"]):not([class*="hover:bg-[#1e3a8a]"]):not([class*="hover:bg-blue-"]):not(aside *):not(.sheet-content *),
+  a:hover:not([class*="bg-primary"]):not([class*="bg-[#1e3a8a]"]):not([class*="bg-blue"]):not([class*="hover:bg-primary"]):not([class*="hover:bg-[#1e3a8a]"]):not([class*="hover:bg-blue-"]):not(aside *):not(.sheet-content *) {
+    color: #1e3a8a !important;
   }
 
   /* ─── SIDEBAR & MOBILE SHEET: Force white text on #1e3a8a dark background ─── */

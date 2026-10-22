@@ -3025,11 +3025,11 @@ export default function FileTracking() {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="flex flex-col gap-4 mb-6 border-b border-border/50 pb-4 animate-slide-down" style={{ animationDelay: '0.1s' }}>
           <div className="w-full overflow-x-auto pb-2 no-scrollbar">
-            <TabsList className="flex w-max h-auto bg-[#0f1115] p-1.5 rounded-2xl border border-white/5 gap-1 shadow-2xl">
+            <TabsList className="flex w-max h-auto bg-white p-1 rounded-xl border border-slate-200 gap-1">
             {isFileViewer ? (
               <TabsTrigger
                 value="view_only"
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"
+                className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
               >
                 <FileSearch className="w-4 h-4" /> View Only
               </TabsTrigger>
@@ -3037,32 +3037,32 @@ export default function FileTracking() {
               <>
                 <TabsTrigger
                   value="reception"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
                 >
                   <Inbox className="w-4 h-4" /> File Reception
                 </TabsTrigger>
 
                 <TabsTrigger
                   value="register"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
                 >
                   <Plus className="w-4 h-4" /> Registration
                 </TabsTrigger>
 
                 <TabsTrigger
                   value="pending_scans"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-amber-400 data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
                 >
                   <Clock className="w-4 h-4" /> Pending Scans
                 </TabsTrigger>
 
                 <TabsTrigger
                   value="tray"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm relative"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs relative"
                 >
                   <Inbox className="w-4 h-4" /> My Tray
                   {inboxCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1 bg-[#ef4444] text-white text-[9px] font-black min-w-[18px] h-[18px] rounded-full flex items-center justify-center border-2 border-[#0f1115] shadow-lg">
+                    <span className="absolute -top-1.5 -right-1 bg-[#ef4444] text-white text-[9px] font-black min-w-[18px] h-[18px] rounded-full flex items-center justify-center border-2 border-white">
                       {inboxCount}
                     </span>
                   )}
@@ -3070,35 +3070,35 @@ export default function FileTracking() {
 
                 <TabsTrigger
                   value="returned_files"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm relative"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs relative"
                 >
                   <RefreshCw className="w-4 h-4" /> Returned Files
                 </TabsTrigger>
 
                 <TabsTrigger
                   value="timeline"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
                 >
                   <History className="w-4 h-4" /> Timeline
                 </TabsTrigger>
 
                 <TabsTrigger
                   value="reports"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
                 >
                   <FileSearch className="w-4 h-4" /> Tracking Reports
                 </TabsTrigger>
 
                 <TabsTrigger
                   value="bulk_modified"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
                 >
                   <CalendarDays className="w-4 h-4" /> Bulk Modified
                 </TabsTrigger>
 
                 <TabsTrigger
                   value="track"
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
                 >
                   <Search className="w-4 h-4" /> Search
                 </TabsTrigger>
@@ -3107,7 +3107,7 @@ export default function FileTracking() {
                 {isCFORole && (
                   <TabsTrigger
                     value="cfo_all_files"
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
                   >
                     <Building2 className="w-4 h-4" /> CFO Dashboard
                   </TabsTrigger>
@@ -3115,16 +3115,21 @@ export default function FileTracking() {
                 {currentRole === 'super_admin' && (
                   <TabsTrigger
                     value="backdate_2026"
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-purple-500 data-[state=active]:text-white text-white/50 hover:text-purple-400 transition-all font-black text-sm"
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
                   >
                     <History className="w-4 h-4" /> Backdate (2026)
                   </TabsTrigger>
                 )}
-                <TabsTrigger value="contractor_bills" className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#14b8a6] data-[state=active]:text-[#0f1115] text-white/50 hover:text-white transition-all font-black text-sm"><Building2 className="w-4 h-4" /> Contractor Bills</TabsTrigger>
-                  {isAdmin && (
+                <TabsTrigger 
+                  value="contractor_bills" 
+                  className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-[#1e3a8a] data-[state=active]:text-white text-slate-600 hover:text-[#1e3a8a] hover:bg-slate-100 transition-colors font-bold text-xs"
+                >
+                  <Building2 className="w-4 h-4" /> Contractor Bills
+                </TabsTrigger>
+                {isAdmin && (
                   <TabsTrigger
                     value="trash_box"
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-xl data-[state=active]:bg-[#ef4444] data-[state=active]:text-white text-white/50 hover:text-red-400 transition-all font-black text-sm"
+                    className="flex items-center gap-2 px-5 py-2 rounded-lg data-[state=active]:bg-rose-600 data-[state=active]:text-white text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors font-bold text-xs"
                   >
                     <Trash2 className="w-4 h-4" /> Trash Box
                   </TabsTrigger>
