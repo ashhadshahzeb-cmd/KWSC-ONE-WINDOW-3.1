@@ -637,183 +637,244 @@ export default function ActivityLog() {
         <head>
           <title>Tracking Slip - ${qrPrintModal.receiving || qrPrintModal.diary}</title>
           <style>
-            @page { size: A5 portrait; margin: 6mm; }
-            * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            img { display: block; }
+            @page {
+              size: A5 portrait;
+              margin: 8mm;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
             body {
-              font-family: 'Segoe UI', Arial, sans-serif;
-              background: #ffffff;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
               color: #0f172a;
-              display: flex;
-              align-items: flex-start;
-              justify-content: center;
-              min-height: 100vh;
-              padding: 8px;
-            }
-            .slip {
-              width: 100%;
-              max-width: 360px;
-              border: 2.5px solid #1e3a8a;
-              border-radius: 12px;
-              overflow: hidden;
               background: #ffffff;
-              position: relative;
-            }
-            .slip-header {
-              background: #1e3a8a;
-              padding: 14px 16px 12px;
+              padding: 10px;
               display: flex;
+              justify-content: center;
+            }
+            img { display: block; }
+            .ticket-container {
+              width: 100%;
+              max-width: 390px;
+              border: 2px solid #1e3a8a;
+              border-radius: 20px;
+              overflow: hidden;
+              position: relative;
+              background: #ffffff;
+            }
+            .header {
+              background: #1e3a8a;
+              color: #ffffff;
+              text-align: center;
+              padding: 18px 12px 14px;
+            }
+            .header h1 {
+              font-size: 16px;
+              font-weight: 900;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+              margin-bottom: 2px;
+            }
+            .header p {
+              font-size: 10px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              opacity: 0.9;
+            }
+            .body {
+              padding: 16px;
+            }
+            .badge-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 8px;
+              margin-bottom: 14px;
+            }
+            .badge-box {
+              background: #f8fafc;
+              border: 1px solid #cbd5e1;
+              border-radius: 10px;
+              padding: 8px;
+              text-align: center;
+            }
+            .badge-label {
+              font-size: 8px;
+              font-weight: 800;
+              color: #1e3a8a;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 3px;
+            }
+            .badge-val {
+              font-size: 13px;
+              font-weight: 900;
+              font-family: monospace;
+              color: #0f172a;
+            }
+            .info-row {
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+              padding: 7px 0;
+              border-bottom: 1px solid #e2e8f0;
+            }
+            .info-label {
+              font-size: 8px;
+              font-weight: 700;
+              text-transform: uppercase;
+              color: #64748b;
+            }
+            .info-value {
+              font-size: 11px;
+              font-weight: 700;
+              color: #1e293b;
+              line-height: 1.3;
+            }
+            .qr-card {
+              margin-top: 14px;
+              padding: 14px;
+              background: #f8fafc;
+              border: 1px dashed #94a3b8;
+              border-radius: 16px;
+              text-align: center;
+              display: flex;
+              flex-direction: column;
               align-items: center;
-              gap: 12px;
+              gap: 6px;
             }
-            .slip-header-icon {
-              width: 38px; height: 38px;
-              background: rgba(255,255,255,0.15);
-              border: 1.5px solid rgba(255,255,255,0.3);
-              border-radius: 8px;
-              display: flex; align-items: center; justify-content: center;
-              font-size: 18px; flex-shrink: 0;
+            .qr-image {
+              width: 140px;
+              height: 140px;
+              border: 3px solid #1e3a8a;
+              border-radius: 12px;
+              padding: 4px;
+              background: #ffffff;
             }
-            .slip-header-text { flex: 1; }
-            .slip-header-text h1 {
-              font-size: 12.5px; font-weight: 900; color: #ffffff;
-              text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.2;
-            }
-            .slip-header-text p {
-              font-size: 8px; font-weight: 600; color: rgba(255,255,255,0.72);
-              text-transform: uppercase; letter-spacing: 0.7px; margin-top: 2px;
-            }
-            .slip-header-badge {
-              font-size: 7.5px; font-weight: 900; color: #1e3a8a;
-              background: #ffffff; border-radius: 4px; padding: 3px 7px;
-              text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
-            }
-            .number-strip {
-              display: grid; grid-template-columns: 1fr 1fr;
-              border-bottom: 1.5px solid #e2e8f0;
-            }
-            .number-cell { padding: 10px 14px; text-align: center; }
-            .number-cell:first-child { border-right: 1.5px solid #e2e8f0; }
-            .number-label {
-              font-size: 7.5px; font-weight: 800; text-transform: uppercase;
-              letter-spacing: 0.6px; color: #1e3a8a; display: block; margin-bottom: 4px;
-            }
-            .number-value {
-              font-size: 13px; font-weight: 900;
-              font-family: 'Courier New', monospace; color: #0f172a; word-break: break-all;
-            }
-            .slip-body { padding: 12px 14px; }
-            .info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-            .info-table tr { border-bottom: 1px solid #f1f5f9; }
-            .info-table td { padding: 5px 0; vertical-align: top; }
-            .info-label-td {
-              font-size: 7.5px; font-weight: 800; text-transform: uppercase;
-              letter-spacing: 0.5px; color: #64748b; width: 90px;
-              padding-right: 8px; white-space: nowrap;
-            }
-            .info-value-td { font-size: 10.5px; font-weight: 700; color: #1e293b; line-height: 1.4; }
-            .info-value-td.blue { color: #1e3a8a; font-weight: 800; }
-            .info-value-td.purple { color: #7c3aed; font-weight: 800; }
-            .qr-section {
-              background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px;
-              padding: 12px; display: flex; align-items: center; gap: 12px;
-            }
-            .qr-img-wrap {
-              border: 2.5px solid #1e3a8a; border-radius: 8px;
-              padding: 4px; background: #ffffff; flex-shrink: 0;
-            }
-            .qr-img-wrap img { width: 90px; height: 90px; display: block; }
-            .qr-text { flex: 1; }
             .qr-title {
-              font-size: 9px; font-weight: 900; color: #1e3a8a;
-              text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px;
+              font-size: 11px;
+              font-weight: 900;
+              color: #1e3a8a;
+              text-transform: uppercase;
+              letter-spacing: 1px;
             }
             .qr-code {
-              font-size: 8px; font-family: 'Courier New', monospace;
-              font-weight: 700; color: #475569; word-break: break-all; margin-bottom: 6px;
-            }
-            .qr-tagline {
-              font-size: 7px; color: #94a3b8; font-weight: 600;
-              text-transform: uppercase; letter-spacing: 0.5px;
-            }
-            .slip-footer {
-              margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e1;
-              display: flex; align-items: center; justify-content: space-between;
-            }
-            .slip-footer span {
-              font-size: 7px; color: #94a3b8; font-weight: 600;
-              text-transform: uppercase; letter-spacing: 0.4px;
+              font-size: 10px;
+              font-family: monospace;
+              font-weight: 700;
+              color: #475569;
             }
             .watermark {
-              position: absolute; top: 50%; left: 50%;
+              position: absolute;
+              top: 50%;
+              left: 50%;
               transform: translate(-50%, -50%) rotate(-35deg);
-              font-size: 55px; font-weight: 900; color: rgba(239,68,68,0.10);
-              text-transform: uppercase; pointer-events: none;
-              user-select: none; white-space: nowrap; letter-spacing: 4px;
+              font-size: 60px;
+              font-weight: 900;
+              color: rgba(239, 68, 68, 0.12);
+              text-transform: uppercase;
+              pointer-events: none;
+              user-select: none;
+              white-space: nowrap;
             }
           </style>
         </head>
         <body>
-          <div class="slip">
+          <div class="ticket-container">
             ${isDuplicatePrint ? '<div class="watermark">DUPLICATE</div>' : ''}
-            <div class="slip-header">
-              <div class="slip-header-icon">&#127963;</div>
-              <div class="slip-header-text">
-                <h1>Official Tracking Slip</h1>
-                <p>Karachi Water &amp; Sewerage Corporation &mdash; Finance Dept.</p>
-              </div>
-              <div class="slip-header-badge">KW&amp;SC</div>
+            <div class="header">
+              <h1>Official Tracking Slip</h1>
+              <p>Karachi Water & Sewerage Corporation</p>
             </div>
-            <div class="number-strip">
-              <div class="number-cell">
-                <span class="number-label">CFO Diary No</span>
-                <span class="number-value">${qrPrintModal.diary || '&mdash;'}</span>
-              </div>
-              <div class="number-cell">
-                <span class="number-label">Receiving No</span>
-                <span class="number-value">${qrPrintModal.receiving || '&mdash;'}</span>
-              </div>
-            </div>
-            <div class="slip-body">
-              <table class="info-table">
-                <tr>
-                  <td class="info-label-td">Subject</td>
-                  <td class="info-value-td">${qrPrintModal.subject || 'N/A'}</td>
-                </tr>
-                <tr>
-                  <td class="info-label-td">Created Date</td>
-                  <td class="info-value-td">${safeFormatDate(qrPrintModal.created_date)}</td>
-                </tr>
-                <tr>
-                  <td class="info-label-td">Printed Date</td>
-                  <td class="info-value-td">${safeFormatDate(qrPrintModal.print_date)}</td>
-                </tr>
-                <tr>
-                  <td class="info-label-td">Forwarded To</td>
-                  <td class="info-value-td blue">${getSectionName(qrPrintModal.mark_to)}</td>
-                </tr>
-                ${qrPrintModal.additional_mark_to ? `
-                <tr>
-                  <td class="info-label-td">Also Marked To</td>
-                  <td class="info-value-td purple">${getSectionName(qrPrintModal.additional_mark_to)}</td>
-                </tr>` : ''}
-              </table>
-              <div class="qr-section">
-                <div class="qr-img-wrap">
-                  <img src="${qrUrl}" alt="QR Code" crossorigin="anonymous" />
+            <div class="body">
+              <div class="badge-grid">
+                <div class="badge-box">
+                  <div class="badge-label">CFO Diary No</div>
+                  <div class="badge-val">${qrPrintModal.diary || '—'}</div>
                 </div>
-                <div class="qr-text">
-                  <div class="qr-title">Scan to Track Live</div>
-                  <div class="qr-code">CODE: ${qrPrintModal.receiving || qrPrintModal.diary}</div>
-                  <div class="qr-tagline">KW&amp;SC File Tracking System</div>
+                <div class="badge-box">
+                  <div class="badge-label">Receiving No</div>
+                  <div class="badge-val">${qrPrintModal.receiving || '—'}</div>
                 </div>
               </div>
-              <div class="slip-footer">
-                <span>Prepared by: Engr. Tariq Zamir</span>
-                <span>Printed: ${new Date().toLocaleDateString('en-PK')}</span>
+
+              <div class="info-row">
+                <div class="info-label">Subject / Purpose</div>
+                <div class="info-value">${qrPrintModal.subject || 'N/A'}</div>
+              </div>
+
+              <div class="info-row">
+                <div class="info-label">Created Date</div>
+                <div class="info-value">${safeFormatDate(qrPrintModal.created_date)}</div>
+              </div>
+
+              <div class="info-row">
+                <div class="info-label">Printed Date</div>
+                <div class="info-value">${safeFormatDate(qrPrintModal.print_date)}</div>
+              </div>
+
+              <div class="info-row">
+                <div class="info-label">Forwarded To Section</div>
+                <div class="info-value" style="color: #1e3a8a; font-weight: 800;">
+                  ${getSectionName(qrPrintModal.mark_to)}
+                </div>
+              </div>
+
+              ${qrPrintModal.additional_mark_to ? `
+                <div class="info-row">
+                  <div class="info-label">Additional Mark To</div>
+                  <div class="info-value" style="color: #7c3aed; font-weight: 800;">
+                    ${getSectionName(qrPrintModal.additional_mark_to)}
+                  </div>
+                </div>
+              ` : ''}
+
+              <div class="qr-card">
+                <img class="qr-image" src="${qrUrl}" alt="Barcode QR" crossorigin="anonymous" />
+                <div class="qr-title">Scan to Track Live</div>
+                <div class="qr-code">CODE: ${qrPrintModal.receiving || qrPrintModal.diary}</div>
               </div>
             </div>
           </div>
+          <script>
+            function doPrint() {
+              window.print();
+              window.close();
+            }
+            window.onload = function() {
+              var imgs = document.querySelectorAll('img');
+              var total = imgs.length;
+              if (total === 0) { setTimeout(doPrint, 200); return; }
+              var loaded = 0;
+              function onLoad() {
+                loaded++;
+                if (loaded >= total) setTimeout(doPrint, 150);
+              }
+              imgs.forEach(function(img) {
+                if (img.complete && img.naturalWidth > 0) { onLoad(); }
+                else {
+                  img.onload = onLoad;
+                  img.onerror = function() {
+                    // Replace broken image with a placeholder text so print doesn't hang
+                    img.style.display = 'none';
+                    var span = document.createElement('span');
+                    span.textContent = '[QR Code Unavailable]';
+                    span.style.cssText = 'font-size:10px;color:#666;display:block;text-align:center;padding:10px;';
+                    img.parentNode.insertBefore(span, img);
+                    onLoad();
+                  };
+                }
+              });
+              // Fallback: print after 4s regardless
+              setTimeout(doPrint, 4000);
+            };
+          </script>
+        </body>
+      </html>
     `;
 
     printWin.document.open();
@@ -1404,181 +1465,184 @@ export default function ActivityLog() {
           </div>
         </DialogContent>
       </Dialog>
-{/* Full Screen Ticket & QR Modal (Clean Flat #1e3a8a Theme) */}
+{/* Full Screen Ticket & QR Modal (Matches File Tracking Layout exactly) */}
       <Dialog open={!!qrPrintModal} onOpenChange={(open) => !open && setQrPrintModal(null)}>
-        <DialogContent className="sm:max-w-[460px] p-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-none">
+        <DialogContent className="sm:max-w-[450px] p-0 overflow-hidden rounded-[40px] border-none bg-zinc-950 shadow-2xl">
           {qrPrintModal && (
-            <div className="w-full max-h-[90vh] overflow-y-auto font-sans bg-white relative qr-ticket-printable">
-              {/* DUPLICATE Watermark */}
+            <div className={`w-full h-full qr-ticket-printable ${isPrintingQR ? 'overflow-visible max-h-none' : 'max-h-[90vh] overflow-y-auto'} overflow-x-hidden font-sans pb-6 relative`}>
+              {/* DUPLICATE Watermark for QR Ticket */}
               {isDuplicatePrint && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[40] overflow-hidden select-none">
-                  <span 
-                    className="text-6xl font-black uppercase text-red-500/15 -rotate-45"
-                    style={{ letterSpacing: '4px' }}
+                <div className="hidden print:flex absolute inset-0 items-center justify-center pointer-events-none z-[100] overflow-hidden">
+                  <div 
+                    className="text-[100px] font-black uppercase text-gray-500/40 -rotate-45 select-none"
+                    style={{ WebkitTextStroke: '2px rgba(100, 116, 139, 0.5)' }}
                   >
                     DUPLICATE
-                  </span>
+                  </div>
                 </div>
               )}
 
-              {/* Subtle Official KWSC Watermark */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10] overflow-hidden">
+              {/* Full-Slip Official KWSC Watermark - Spans entire print & ticket */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[35] overflow-hidden">
                 <img
                   src="/kwsc-watermark-logo.png"
                   alt="KWSC Watermark"
-                  className="w-72 h-72 object-contain opacity-[0.04] select-none"
+                  className="w-[360px] h-[360px] object-contain opacity-[0.12] select-none filter contrast-125 print:opacity-[0.16]"
                 />
               </div>
 
-              {/* Official Government Header */}
-              <div className="bg-[#1e3a8a] text-white p-4 text-center relative shrink-0 border-b-2 border-[#1e3a8a]">
-                <div className="flex items-center justify-center gap-3 mb-2">
-                  <img 
-                    src="/kwsc-watermark-logo.png" 
-                    alt="KW&SC" 
-                    className="w-10 h-10 object-contain bg-white rounded-lg p-0.5"
-                  />
-                  <div className="text-left">
-                    <h1 className="text-xs font-black tracking-wide uppercase leading-tight text-white">
-                      Karachi Water &amp; Sewerage Corporation
-                    </h1>
-                    <p className="text-[9.5px] font-semibold text-blue-200 uppercase tracking-wider">
-                      Finance Department &bull; One Window Facilitation
-                    </p>
-                  </div>
+              {/* Header */}
+              <div className="bg-[#1e3a8a] px-6 pt-8 pb-16 rounded-b-[40px] shadow-2xl relative overflow-hidden shrink-0">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full -ml-10 -mb-10 blur-2xl"></div>
+
+                <div className="relative flex justify-center items-center mb-4">
+                  <ShieldCheck className="w-10 h-10 text-emerald-400" />
                 </div>
-                <div className="inline-block bg-white text-[#1e3a8a] text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded">
-                  Official File Tracking Slip
+
+                <div className="relative text-center space-y-1">
+                  <h1 className="text-white text-xl font-black tracking-tighter uppercase">Verified Tracking</h1>
+                  <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Karachi Water Corporation</p>
                 </div>
               </div>
 
-              {/* Dual Identification Strip */}
-              <div className="grid grid-cols-2 border-b border-slate-200">
-                <div className="p-3 text-center border-r border-slate-200 bg-blue-50/70">
-                  <span className="text-[9px] font-black text-[#1e3a8a] uppercase tracking-wider block mb-0.5">
-                    CFO Diary No
-                  </span>
-                  <p className="text-sm font-black text-slate-900 font-mono tracking-tight break-all">
-                    {qrPrintModal.diary || '—'}
-                  </p>
-                </div>
-                <div className="p-3 text-center bg-emerald-50/70">
-                  <span className="text-[9px] font-black text-emerald-800 uppercase tracking-wider block mb-0.5">
-                    Receiving No
-                  </span>
-                  <p className="text-sm font-black text-slate-900 font-mono tracking-tight break-all">
-                    {qrPrintModal.receiving || '—'}
-                  </p>
-                </div>
-              </div>
+              {/* Main Content Card */}
+              <div className="px-5 -mt-10 relative z-10 shrink-0">
+                <Card className="rounded-[30px] border-none shadow-xl overflow-hidden bg-white">
+                  <div className="p-1 bg-[#1e3a8a]"></div>
+                  <CardContent className="pt-6 space-y-6">
 
-              {/* Content Body */}
-              <div className="p-4 space-y-3.5 relative z-20 bg-white">
-                {/* File Metadata Info Table */}
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2 text-xs">
-                  <div className="flex items-start justify-between gap-3 pb-2 border-b border-slate-200">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide shrink-0">Subject</span>
-                    <span className="font-extrabold text-slate-900 text-right leading-snug">
-                      {qrPrintModal.subject || 'Subject Details'}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Created Date</span>
-                    <span className="font-black text-amber-700 font-mono">
-                      {safeFormatDate(qrPrintModal.created_date)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-200">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Printed Date</span>
-                    <span className="font-black text-slate-800 font-mono">
-                      {safeFormatDate(qrPrintModal.print_date)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Forwarded To</span>
-                    <span className="font-black text-[#1e3a8a] uppercase bg-blue-100/70 px-2 py-0.5 rounded border border-blue-200">
-                      {getSectionName(qrPrintModal.mark_to)}
-                    </span>
-                  </div>
-                  {qrPrintModal.additional_mark_to && (
-                    <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Also Marked To</span>
-                      <span className="font-black text-purple-700 uppercase bg-purple-100/70 px-2 py-0.5 rounded border border-purple-200">
-                        {getSectionName(qrPrintModal.additional_mark_to)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* QR Code Verification Card */}
-                <div className="bg-white rounded-xl p-3.5 border-2 border-[#1e3a8a] text-center flex items-center gap-4">
-                  <div className="p-1.5 bg-white rounded-lg border border-slate-200 shrink-0">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`)}&color=1e3a8a&margin=0`}
-                      alt="QR Code"
-                      className="w-24 h-24 block"
-                    />
-                  </div>
-                  <div className="text-left flex-1 min-w-0">
-                    <p className="text-[#1e3a8a] text-xs font-black uppercase tracking-wider">
-                      Scan to Track Live
-                    </p>
-                    <p className="text-slate-800 text-xs font-black font-mono tracking-tight mt-0.5 break-all">
-                      CODE: {qrPrintModal.receiving || qrPrintModal.diary}
-                    </p>
-                    <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wide mt-1">
-                      Prepared by Engr. Tariq Zamir
-                    </p>
-                    <p className="text-[8px] font-semibold text-slate-400 uppercase tracking-wide">
-                      KW&amp;SC One Window Facilitation
-                    </p>
-                  </div>
-                </div>
-
-                {/* Action & Override Controls (No-Print) */}
-                <div className="no-print space-y-3 pt-2">
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2.5">
-                    <div className="flex items-center gap-2">
-                      <Checkbox 
-                        id="duplicate-print-qr-activity" 
-                        checked={isDuplicatePrint}
-                        onCheckedChange={(checked) => setIsDuplicatePrint(!!checked)}
-                      />
-                      <Label htmlFor="duplicate-print-qr-activity" className="text-xs font-bold text-amber-700 cursor-pointer uppercase">
-                        Print with DUPLICATE watermark
-                      </Label>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[9.5px] uppercase font-bold text-slate-600 block mb-1">Override Created Date</label>
-                        <input
-                          type="date"
-                          value={qrPrintModal.created_date ? qrPrintModal.created_date.split('T')[0] : ''}
-                          onChange={e => setQrPrintModal({ ...qrPrintModal, created_date: e.target.value })}
-                          className="w-full h-8 text-xs bg-white border border-slate-300 text-slate-800 font-bold rounded-lg px-2 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                        />
+                    {/* Tracking Numbers */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-[#1e3a8a]/20 relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-[#1e3a8a] uppercase tracking-[0.1em]">CFO Diary</span>
+                        <p className="text-sm font-black text-slate-900 font-mono mt-1 tracking-tighter">{qrPrintModal.diary || '—'}</p>
                       </div>
-                      <div>
-                        <label className="text-[9.5px] uppercase font-bold text-slate-600 block mb-1">Override Print Date</label>
-                        <input
-                          type="date"
-                          value={qrPrintModal.print_date ? qrPrintModal.print_date.split('T')[0] : ''}
-                          onChange={e => setQrPrintModal({ ...qrPrintModal, print_date: e.target.value })}
-                          className="w-full h-8 text-xs bg-white border border-slate-300 text-slate-800 font-bold rounded-lg px-2 focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                        />
+                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-emerald-500/20 relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-emerald-700 uppercase tracking-[0.1em]">Receiving No</span>
+                        <p className="text-sm font-black text-slate-900 font-mono mt-1 tracking-tighter">{qrPrintModal.receiving || '—'}</p>
                       </div>
                     </div>
-                  </div>
 
-                  <Button
-                    className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-black text-xs py-2.5 rounded-xl transition-all shadow-none flex items-center justify-center gap-2"
-                    style={{ color: '#ffffff' }}
-                    onClick={handlePrintQR}
-                  >
-                    <Printer className="w-4 h-4" style={{ color: '#ffffff' }} />
-                    <span style={{ color: '#ffffff' }}>Print Official Tracking Slip (A5)</span>
-                  </Button>
-                </div>
+                    {/* File Info */}
+                    <div className="space-y-4 pt-4 border-t border-zinc-100">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Subject</span>
+                          <p className="text-xs font-bold text-zinc-800 leading-tight">{qrPrintModal.subject}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0">
+                          <Calendar className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Created Date</span>
+                          <p className="text-xs font-black text-amber-600 tracking-tight">{safeFormatDate(qrPrintModal.created_date)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Printed Date</span>
+                          <p className="text-xs font-black text-emerald-600 tracking-tight">
+                            {safeFormatDate(qrPrintModal.print_date)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase">Current Section</span>
+                          <p className="text-xs font-black text-blue-600 uppercase tracking-tight">{getSectionName(qrPrintModal.mark_to)}</p>
+                        </div>
+                      </div>
+                      {qrPrintModal.additional_mark_to && (
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 shrink-0">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-bold text-zinc-400 uppercase">Additional Mark To</span>
+                            <p className="text-xs font-black text-purple-600 uppercase tracking-tight">{getSectionName(qrPrintModal.additional_mark_to)}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* QR Section */}
+                    <div className="mt-4 p-5 bg-slate-50 border border-slate-200 rounded-[30px] flex flex-col items-center gap-4 text-center">
+                      <div className="bg-white p-3 rounded-2xl shadow-sm border-2 border-[#1e3a8a]/20 flex flex-col items-center">
+                        <div className="relative inline-flex items-center justify-center">
+                          <img
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`)}&color=1e3a8a`}
+                            alt="QR"
+                            className="w-28 h-28"
+                          />
+                          {/* Centered KWSC Watermark Logo */}
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <img
+                              src="/kwsc-watermark-logo.png"
+                              alt="KWSC Watermark"
+                              className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-md border-2 border-[#1e3a8a]/40"
+                            />
+                          </div>
+                        </div>
+                        <span className="text-[8px] font-bold mt-2 text-slate-600 uppercase text-center">Prepared by Engineer Tariq Zamir</span>
+                      </div>
+                      <div>
+                        <p className="text-[#1e3a8a] text-sm font-black uppercase tracking-widest">Scan to Track Live</p>
+                        <p className="text-slate-500 text-[10px] font-bold tracking-tight mt-1 font-mono">CODE: {qrPrintModal.receiving}</p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex flex-col gap-2 justify-center">
+                      <div className="no-print space-y-2 mb-2 bg-slate-500/5 p-3 rounded-lg border border-slate-500/20">
+                        <div className="flex items-center gap-2 mb-3 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+                          <Checkbox 
+                            id="duplicate-print-qr-activity" 
+                            checked={isDuplicatePrint}
+                            onCheckedChange={(checked) => setIsDuplicatePrint(!!checked)}
+                          />
+                          <Label htmlFor="duplicate-print-qr-activity" className="text-[10px] font-bold text-amber-600 cursor-pointer uppercase">Print with DUPLICATE watermark</Label>
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-amber-600">Override Created Date</label>
+                          <input
+                            type="date"
+                            value={qrPrintModal.created_date ? qrPrintModal.created_date.split('T')[0] : ''}
+                            onChange={e => setQrPrintModal({ ...qrPrintModal, created_date: e.target.value })}
+                            className="w-full h-8 text-xs bg-white border border-amber-500/30 text-amber-600 font-bold rounded-md px-2 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase font-bold text-emerald-600">Override Print Date</label>
+                          <input
+                            type="date"
+                            value={qrPrintModal.print_date ? qrPrintModal.print_date.split('T')[0] : ''}
+                            onChange={e => setQrPrintModal({ ...qrPrintModal, print_date: e.target.value })}
+                            className="w-full h-8 text-xs bg-white border border-emerald-500/30 text-emerald-600 font-bold rounded-md px-2 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                          />
+                        </div>
+                      </div>
+                      <Button
+                        className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold rounded-xl no-print"
+                        onClick={handlePrintQR}
+                        style={{ color: '#ffffff' }}
+                      >
+                        <Printer className="w-4 h-4 mr-2" style={{ color: '#ffffff' }} />
+                        <span style={{ color: '#ffffff' }}>Print Tracking Slip</span>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}

@@ -946,20 +946,6 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   .qr-ticket-printable, .qr-ticket-printable * {
     visibility: visible !important;
   }
-  .qr-ticket-printable {
-    position: fixed !important;
-    left: 50% !important;
-    top: 0 !important;
-    transform: translateX(-50%) !important;
-    width: 100% !important;
-    max-width: 420px !important;
-    margin: 0 auto !important;
-    padding: 10px !important;
-    visibility: visible !important;
-    display: block !important;
-    background: #ffffff !important;
-    border: none !important;
-  }
   .print-only {
     position: absolute;
     left: 0;
