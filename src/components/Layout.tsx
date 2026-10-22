@@ -215,9 +215,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 {!collapsed && (
                   <button 
                     onClick={() => setOpenCategory(openCategory === category.id ? null : category.id)}
-                    className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black text-white uppercase tracking-wider transition-colors"
+                    className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black uppercase tracking-wider transition-colors"
+                    style={{ color: '#ffffff' }}
                   >
-                    {category.label}
+                    <span style={{ color: '#ffffff' }}>{category.label}</span>
                     <motion.div
                       animate={{ rotate: openCategory === category.id ? 90 : 0 }}
                       transition={{ duration: 0.2 }}
@@ -322,9 +323,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                         <div key={category.id} className="pt-4 border-t border-blue-800">
                           <button 
                             onClick={() => setOpenCategory(openCategory === category.id ? null : category.id)}
-                            className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black text-white uppercase tracking-wider transition-colors"
+                            className="w-full flex items-center justify-between px-3 mb-2 text-xs font-black uppercase tracking-wider transition-colors"
+                            style={{ color: '#ffffff' }}
                           >
-                            {category.label}
+                            <span style={{ color: '#ffffff' }}>{category.label}</span>
                             <ChevronRight className={cn("w-3.5 h-3.5 transition-transform duration-200 text-white", openCategory === category.id && "rotate-90")} />
                           </button>
                           <div className={cn(

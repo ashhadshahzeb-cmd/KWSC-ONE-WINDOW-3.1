@@ -639,22 +639,22 @@ export default function Dashboard() {
 
         {/* TOTAL CLAIM AMOUNT */}
         <motion.div variants={itemVariants}>
-          <Card className="bg-white border-slate-200 shadow-sm hover:shadow-md transition-shadow rounded-2xl">
+          <Card className="border-2 border-amber-400 rounded-2xl" style={{ background: '#fffbeb' }}>
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-600">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-amber-800">
                   Total File Amount (PKR)
                 </span>
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-200 flex items-center justify-center font-bold">
-                  <FileCheck className="w-5 h-5 text-emerald-900" />
+                <div className="w-10 h-10 rounded-xl bg-amber-400 flex items-center justify-center font-bold">
+                  <FileCheck className="w-5 h-5 text-white" />
                 </div>
               </div>
               <div className="mt-3">
-                <span className="text-lg sm:text-xl lg:text-2xl font-black text-slate-900 tracking-tight font-mono break-all leading-tight">
+                <span className="text-lg sm:text-xl lg:text-2xl font-black tracking-tight font-mono break-all leading-tight px-3 py-1 rounded-lg" style={{ color: '#92400e', background: '#fef08a', border: '1.5px solid #fbbf24', display: 'inline-block' }}>
                   {formatCurrency(stats.totalAmount)}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-slate-700 font-semibold">
+              <p className="mt-2 text-xs text-amber-800 font-semibold">
                 Combined financial value across recorded claims
               </p>
             </CardContent>
@@ -895,7 +895,7 @@ export default function Dashboard() {
 
                 <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
                   <span className="text-slate-700 font-bold">Total Amount:</span>
-                  <span className="font-mono font-black text-slate-900">{formatCurrency(cat.totalAmount)}</span>
+                  <span className="font-mono font-black px-2 py-0.5 rounded" style={{ color: '#92400e', background: '#fef08a', border: '1px solid #fbbf24' }}>{formatCurrency(cat.totalAmount)}</span>
                 </div>
 
                 {/* Subcategory Pills */}
@@ -1024,8 +1024,8 @@ export default function Dashboard() {
                     <td className="py-3 px-3 text-center font-black font-mono text-sky-800">
                       {sec.outwardCount.toLocaleString()}
                     </td>
-                    <td className="py-3 px-3 text-right font-mono font-bold text-slate-900">
-                      {formatCurrency(sec.totalAmount)}
+                    <td className="py-3 px-3 text-right font-mono font-bold">
+                      <span className="px-2 py-0.5 rounded text-xs font-black" style={{ color: '#92400e', background: '#fef08a', border: '1px solid #fbbf24' }}>{formatCurrency(sec.totalAmount)}</span>
                     </td>
                     <td className="py-3 px-3 text-center">
                       <button
@@ -1107,8 +1107,8 @@ export default function Dashboard() {
                       <span className="text-amber-800 font-bold text-[11px] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">In Section</span>
                     )}
                   </td>
-                  <td className="py-3.5 px-4 text-right font-mono font-black text-slate-900">
-                    {r.amount ? formatCurrency(r.amount) : "---"}
+                  <td className="py-3.5 px-4 text-right font-mono font-black">
+                    {r.amount ? <span className="px-1.5 py-0.5 rounded text-xs font-black" style={{ color: '#92400e', background: '#fef08a', border: '1px solid #fbbf24' }}>{formatCurrency(r.amount)}</span> : <span className="text-slate-400">---</span>}
                   </td>
                 </tr>
               ))}
@@ -1141,7 +1141,7 @@ export default function Dashboard() {
               </div>
               <div className="text-right">
                 <span className="text-xs uppercase font-extrabold text-slate-600 block">Total Financial Amount</span>
-                <span className="text-2xl font-black text-slate-900 font-mono">
+                <span className="text-2xl font-black font-mono px-3 py-1 rounded-lg inline-block mt-1" style={{ color: '#92400e', background: '#fef08a', border: '1.5px solid #fbbf24' }}>
                   {formatCurrency(
                     drilldownModal?.items.reduce((s, i) => s + (Number(i.amount) || 0), 0) || 0
                   )}
@@ -1175,8 +1175,8 @@ export default function Dashboard() {
                       <td className="py-2.5 px-3 font-mono font-bold text-slate-600">
                         {item.inward_date || "---"}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-black text-slate-900">
-                        {item.amount ? formatCurrency(item.amount) : "---"}
+                      <td className="py-2.5 px-3 text-right font-mono font-black">
+                        {item.amount ? <span className="px-1.5 py-0.5 rounded text-[11px] font-black" style={{ color: '#92400e', background: '#fef08a', border: '1px solid #fbbf24' }}>{formatCurrency(item.amount)}</span> : <span className="text-slate-400">---</span>}
                       </td>
                     </tr>
                   ))}
