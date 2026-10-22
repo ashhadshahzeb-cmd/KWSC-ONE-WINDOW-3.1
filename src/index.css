@@ -772,17 +772,50 @@ html.dark {
   .text-gray-500,
   .text-zinc-600,
   .text-zinc-500 {
-    color: #94a3b8 !important;
+    color: #cbd5e1 !important;
   }
 
   .text-slate-400,
   .text-gray-400 {
-    color: #64748b !important;
+    color: #94a3b8 !important;
   }
 
   /* Brand text: keep navy blue → cyan accent in dark */
   .text-\[\#1e3a8a\] {
     color: #38bdf8 !important;
+  }
+
+  /* Colored text shades: 600/700/800 dark shades map to vibrant high-contrast 300/400 shades in dark mode */
+  .text-amber-600,
+  .text-amber-700,
+  .text-amber-800,
+  .text-amber-900 {
+    color: #fcd34d !important;
+  }
+
+  .text-emerald-600,
+  .text-emerald-700,
+  .text-emerald-800 {
+    color: #6ee7b7 !important;
+  }
+
+  .text-blue-600,
+  .text-blue-700,
+  .text-blue-800 {
+    color: #38bdf8 !important;
+  }
+
+  .text-purple-600,
+  .text-purple-700,
+  .text-purple-800 {
+    color: #d8b4fe !important;
+  }
+
+  .text-red-600,
+  .text-red-700,
+  .text-rose-600,
+  .text-rose-700 {
+    color: #fca5a5 !important;
   }
 
   /* ─── 3. Borders ─── */
@@ -987,6 +1020,26 @@ html.dark {
   .sheet-content[class*="bg-[#1e3a8a]"],
   .sheet-content[class*="bg-[#1e3a8a]"] * {
     color: #ffffff !important;
+  }
+
+  /* ─── 21. Barcode / QR Code Ticket Card Overrides ─── */
+  /* The QR/Barcode box MUST always be pure solid white so scanners and cameras can read it */
+  .qr-code-white-card,
+  .qr-code-white-card *,
+  [data-qr-box],
+  [data-qr-box] * {
+    background-color: #ffffff !important;
+  }
+  .qr-code-white-card span,
+  .qr-code-white-card p,
+  [data-qr-box] span,
+  [data-qr-box] p {
+    color: #0f172a !important;
+  }
+
+  /* In dark mode, ensure .qr-ticket-printable watermarks do not obstruct text */
+  .qr-ticket-printable img[alt*="Watermark"] {
+    opacity: 0.12 !important;
   }
 }
 

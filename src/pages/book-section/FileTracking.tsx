@@ -6479,88 +6479,88 @@ export default function FileTracking() {
 
                       {/* Tracking Numbers */}
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-blue-50/70 print:bg-slate-50 rounded-2xl p-3.5 text-center border-2 border-blue-200 print:border-slate-300 relative group overflow-hidden">
-                          <span className="text-[10px] font-black text-[#1e3a8a] print:text-[#1e3a8a] uppercase tracking-wider block">CFO Diary</span>
-                          <p className="text-sm font-black text-slate-900 print:text-black font-mono mt-1 tracking-tight">{qrFullScreen?.diary || '—'}</p>
+                        <div className="bg-blue-50/70 dark:bg-blue-950/70 print:bg-slate-50 rounded-2xl p-3.5 text-center border-2 border-blue-200 dark:border-blue-700/60 print:border-slate-300 relative group overflow-hidden">
+                          <span className="text-[10px] font-black text-[#1e3a8a] dark:text-sky-300 print:text-[#1e3a8a] uppercase tracking-wider block">CFO Diary</span>
+                          <p className="text-sm font-black text-slate-900 dark:text-white print:text-black font-mono mt-1 tracking-tight">{qrFullScreen?.diary || '—'}</p>
                         </div>
-                        <div className="bg-emerald-50/70 print:bg-slate-50 rounded-2xl p-3.5 text-center border-2 border-emerald-200 print:border-slate-300 relative group overflow-hidden">
-                          <span className="text-[10px] font-black text-emerald-700 print:text-emerald-800 uppercase tracking-wider block">Receiving No</span>
-                          <p className="text-sm font-black text-slate-900 print:text-black font-mono mt-1 tracking-tight">{qrFullScreen?.receiving || '—'}</p>
+                        <div className="bg-emerald-50/70 dark:bg-emerald-950/70 print:bg-slate-50 rounded-2xl p-3.5 text-center border-2 border-emerald-200 dark:border-emerald-700/60 print:border-slate-300 relative group overflow-hidden">
+                          <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 print:text-emerald-800 uppercase tracking-wider block">Receiving No</span>
+                          <p className="text-sm font-black text-slate-900 dark:text-white print:text-black font-mono mt-1 tracking-tight">{qrFullScreen?.receiving || '—'}</p>
                         </div>
                       </div>
 
                       {/* File Info */}
-                      <div className="space-y-3.5 pt-3 border-t border-slate-100 print:border-slate-200">
+                      <div className="space-y-3.5 pt-3 border-t border-slate-100 dark:border-slate-800 print:border-slate-200">
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center shrink-0 border border-blue-100 print:border-slate-200">
-                            <FileText className="w-4 h-4 text-[#1e3a8a]" />
+                          <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-[#1e3a8a] dark:text-sky-300 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-700 print:border-slate-200">
+                            <FileText className="w-4 h-4 text-[#1e3a8a] dark:text-sky-300" />
                           </div>
                           <div>
-                            <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Subject</span>
-                            <p className="text-xs font-black text-slate-900 print:text-black leading-snug">{qrFullScreen?.subject || ticket?.subject || "Subject Details"}</p>
+                            <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Subject</span>
+                            <p className="text-xs font-black text-slate-900 dark:text-white print:text-black leading-snug">{qrFullScreen?.subject || ticket?.subject || "Subject Details"}</p>
                           </div>
                         </div>
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100 print:border-slate-200">
-                            <Calendar className="w-4 h-4 text-amber-600" />
+                          <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-700 print:border-slate-200">
+                            <Calendar className="w-4 h-4 text-amber-600 dark:text-amber-300" />
                           </div>
                           <div>
-                            <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Created Date</span>
-                            <p className="text-xs font-black text-amber-700 print:text-amber-800 font-mono tracking-tight">{safeFormatDate(qrFullScreen?.created_date)}</p>
+                            <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Created Date</span>
+                            <p className="text-xs font-black text-amber-700 dark:text-amber-300 print:text-amber-800 font-mono tracking-tight">{safeFormatDate(qrFullScreen?.created_date)}</p>
                           </div>
                         </div>
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 print:border-slate-200">
-                            <Clock className="w-4 h-4 text-emerald-600" />
+                          <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-700 print:border-slate-200">
+                            <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-300" />
                           </div>
                           <div>
-                            <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Printed Date</span>
-                            <p className="text-xs font-black text-emerald-700 print:text-emerald-800 font-mono tracking-tight">
+                            <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Printed Date</span>
+                            <p className="text-xs font-black text-emerald-700 dark:text-emerald-300 print:text-emerald-800 font-mono tracking-tight">
                               {safeFormatDate(qrFullScreen?.print_date)}
                             </p>
                           </div>
                         </div>
                         {qrFullScreen?.history?.filter((h: any) => (h.action === 'FORWARD' || h.action === 'FORWARDED') && h.from)?.slice(-1)[0]?.from && (
                           <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-100 print:border-slate-200">
-                              <Building2 className="w-4 h-4 text-amber-600" />
+                            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-700 print:border-slate-200">
+                              <Building2 className="w-4 h-4 text-amber-600 dark:text-amber-300" />
                             </div>
                             <div>
-                              <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Previous Section</span>
-                              <p className="text-xs font-black text-slate-800 print:text-black uppercase tracking-tight">
+                              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Previous Section</span>
+                              <p className="text-xs font-black text-slate-800 dark:text-slate-100 print:text-black uppercase tracking-tight">
                                 {sections.find(s => s.id === qrFullScreen.history!.filter((h: any) => (h.action === 'FORWARD' || h.action === 'FORWARDED') && h.from).slice(-1)[0].from)?.name || qrFullScreen.history!.filter((h: any) => (h.action === 'FORWARD' || h.action === 'FORWARDED') && h.from).slice(-1)[0].from}
                               </p>
                             </div>
                           </div>
                         )}
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center shrink-0 border border-blue-100 print:border-slate-200">
-                            <Building2 className="w-4 h-4 text-[#1e3a8a]" />
+                          <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/40 text-[#1e3a8a] dark:text-sky-300 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-700 print:border-slate-200">
+                            <Building2 className="w-4 h-4 text-[#1e3a8a] dark:text-sky-300" />
                           </div>
                           <div>
-                            <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Current Section</span>
-                            <p className="text-xs font-black text-[#1e3a8a] print:text-[#1e3a8a] uppercase tracking-tight">{qrFullScreen?.mark_to ? (sections.find(s => s.id === qrFullScreen.mark_to)?.name || qrFullScreen.mark_to) : (ticket?.mark_to || "CFO Office")}</p>
+                            <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Current Section</span>
+                            <p className="text-xs font-black text-[#1e3a8a] dark:text-sky-300 print:text-[#1e3a8a] uppercase tracking-tight">{qrFullScreen?.mark_to ? (sections.find(s => s.id === qrFullScreen.mark_to)?.name || qrFullScreen.mark_to) : (ticket?.mark_to || "CFO Office")}</p>
                           </div>
                         </div>
                         {(qrFullScreen?.additional_mark_to || ticket?.additional_mark_to) && (
                           <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 border border-purple-100 print:border-slate-200">
-                              <Building2 className="w-4 h-4 text-purple-600" />
+                            <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-700 print:border-slate-200">
+                              <Building2 className="w-4 h-4 text-purple-600 dark:text-purple-300" />
                             </div>
                             <div>
-                              <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wide">Additional Mark To</span>
-                              <p className="text-xs font-black text-purple-700 print:text-purple-800 uppercase tracking-tight">{qrFullScreen?.additional_mark_to ? (sections.find(s => s.id === qrFullScreen.additional_mark_to)?.name || qrFullScreen.additional_mark_to) : (sections.find(s => s.id === ticket?.additional_mark_to)?.name || ticket?.additional_mark_to)}</p>
+                              <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-300 uppercase tracking-wide">Additional Mark To</span>
+                              <p className="text-xs font-black text-purple-700 dark:text-purple-300 print:text-purple-800 uppercase tracking-tight">{qrFullScreen?.additional_mark_to ? (sections.find(s => s.id === qrFullScreen.additional_mark_to)?.name || qrFullScreen.additional_mark_to) : (sections.find(s => s.id === ticket?.additional_mark_to)?.name || ticket?.additional_mark_to)}</p>
                             </div>
                           </div>
                         )}
                       </div>
 
-                      {/* QR Section - Crisp High Contrast Navy Blue, Clean borders */}
-                      <div className="mt-3 p-4 bg-slate-50 print:bg-white rounded-2xl flex flex-col items-center gap-3 text-center border border-slate-200 print:border-none print:shadow-none">
-                        <div className="bg-white p-2.5 rounded-xl border-2 border-[#1e3a8a] print:border-[#1e3a8a] flex flex-col items-center">
-                          <div className="relative inline-flex items-center justify-center">
+                      {/* QR Section - Crisp High Contrast, Clean borders, 100% Scannable */}
+                      <div className="mt-3 p-4 bg-slate-50 dark:bg-slate-900/80 print:bg-white rounded-2xl flex flex-col items-center gap-3 text-center border border-slate-200 dark:border-slate-700 print:border-none print:shadow-none">
+                        <div className="qr-code-white-card bg-white p-3 rounded-xl border-2 border-[#1e3a8a] dark:border-sky-400 print:border-[#1e3a8a] flex flex-col items-center shadow-md" style={{ backgroundColor: '#ffffff' }}>
+                          <div className="relative inline-flex items-center justify-center p-1 rounded-lg" style={{ backgroundColor: '#ffffff' }}>
                             <img
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrFullScreen?.diary}/${qrFullScreen?.receiving}`)}&color=1e3a8a`}
+                              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrFullScreen?.diary}/${qrFullScreen?.receiving}`)}&color=000000`}
                               alt="QR"
                               className="w-28 h-28"
                             />
@@ -6573,11 +6573,11 @@ export default function FileTracking() {
                               />
                             </div>
                           </div>
-                          <span className="text-[8px] font-bold mt-1.5 text-slate-600 print:text-slate-800 uppercase text-center">Prepared by Engineer Tariq Zamir</span>
+                          <span className="text-[8.5px] font-black mt-1.5 uppercase text-center" style={{ color: '#0f172a' }}>Prepared by Engineer Tariq Zamir</span>
                         </div>
                         <div>
-                          <p className="text-[#1e3a8a] print:text-[#1e3a8a] text-xs font-black uppercase tracking-widest">Scan to Track Live</p>
-                          <p className="text-slate-600 print:text-black text-[11px] font-bold tracking-tight mt-0.5 font-mono">CODE: {qrFullScreen?.receiving}</p>
+                          <p className="text-[#1e3a8a] dark:text-sky-300 print:text-[#1e3a8a] text-xs font-black uppercase tracking-widest">Scan to Track Live</p>
+                          <p className="text-slate-800 dark:text-white print:text-black text-xs font-black tracking-tight mt-0.5 font-mono">CODE: {qrFullScreen?.receiving}</p>
                         </div>
                       </div>
 
