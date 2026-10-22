@@ -103,19 +103,25 @@ const RestrictedDashboard = () => {
   if (!isAuthenticated) {
     return (
       <div className="h-[80vh] flex items-center justify-center p-4">
-        <Card className="w-full max-w-md border-white/10 bg-[#09090b]/80 backdrop-blur-2xl shadow-2xl overflow-hidden">
-          <div className="h-2 bg-gradient-to-r from-sky-500 via-emerald-500 to-sky-500" />
-          <CardHeader className="text-center pt-8">
-            <div className="mx-auto w-20 h-20 rounded-3xl bg-sky-500/10 flex items-center justify-center mb-6 border border-sky-500/20 shadow-inner">
-              <Lock className="w-10 h-10 text-sky-500" />
+        <Card className="w-full max-w-md bg-white border border-slate-200/90 rounded-3xl shadow-xl overflow-hidden p-6 relative">
+          <div className="h-2 bg-[#1e3a8a] -mx-6 -mt-6 mb-6" />
+          <CardHeader className="text-center pt-2">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-blue-50 text-[#1e3a8a] flex items-center justify-center mb-4 border border-blue-100 shadow-xs">
+              <Lock className="w-8 h-8 text-[#1e3a8a]" />
             </div>
-            <CardTitle className="text-3xl font-black tracking-tight text-white uppercase">Finance Restricted</CardTitle>
-            <p className="text-muted-foreground text-sm mt-2 font-medium tracking-wide">Enter secure key for cloud synchronization.</p>
+            <CardTitle className="text-2xl font-black tracking-tight text-[#1e3a8a] uppercase">Finance Restricted</CardTitle>
+            <p className="text-slate-500 text-xs mt-1 font-medium">Enter secure key for cloud synchronization.</p>
           </CardHeader>
-          <CardContent className="px-8 pb-10">
-            <form onSubmit={handleLogin} className="space-y-6">
-              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-white/5 border-white/10 h-12 text-center text-xl tracking-[0.5em] focus:border-sky-500/50 transition-all" />
-              <Button type="submit" className="w-full h-12 bg-sky-500 hover:bg-sky-400 text-white font-black text-lg shadow-[0_0_20px_rgba(14,165,233,0.3)]">
+          <CardContent className="px-4 pb-6 pt-2">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <Input 
+                type="password" 
+                placeholder="••••••••" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                className="bg-slate-50 border border-slate-200 h-12 text-center text-xl tracking-[0.5em] rounded-xl text-slate-800 focus:border-[#1e3a8a] focus:ring-[#1e3a8a] transition-all" 
+              />
+              <Button type="submit" className="w-full h-12 bg-[#1e3a8a] hover:bg-[#172554] text-white font-black text-sm tracking-widest uppercase rounded-xl shadow-md transition-all">
                 AUTHENTICATE
               </Button>
             </form>
@@ -126,64 +132,74 @@ const RestrictedDashboard = () => {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-1000 pb-20">
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       {/* HEADER SECTION */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 px-2">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 px-1">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[10px] font-black uppercase tracking-widest">Live Cloud Data</div>
-            <div className="flex items-center gap-1.5 text-emerald-500">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">Sync Secure</span>
+            <div className="px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-[#1e3a8a] text-[10px] font-black uppercase tracking-widest shadow-xs">
+              Live Cloud Data
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold uppercase tracking-wider shadow-xs">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Sync Secure</span>
             </div>
           </div>
-          <h1 className="text-4xl font-black tracking-tighter text-white">Restricted Dashboard</h1>
-          <p className="text-muted-foreground text-sm font-medium italic mt-1">KW&SC Finance Department - Official Daily Statement</p>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#1e3a8a]">Restricted Dashboard</h1>
+          <p className="text-slate-500 text-sm font-medium mt-1">KW&SC Finance Department - Official Daily Statement</p>
         </div>
-        <div className="flex items-center gap-4">
-          <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10 h-11" onClick={fetchRecords} disabled={isLoading}>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            className="border border-slate-200 bg-white text-[#1e3a8a] hover:bg-blue-50 hover:text-[#1e3a8a] font-bold h-10 px-4 rounded-xl shadow-xs transition-all" 
+            onClick={fetchRecords} 
+            disabled={isLoading}
+          >
             <Loader2 className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh Data
           </Button>
-          <Button className="bg-white text-black hover:bg-white/90 h-11 font-bold px-6 shadow-xl" onClick={() => window.print()}>
-            <Printer className="w-4 h-4 mr-2" />
+          <Button 
+            className="bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold h-10 px-5 rounded-xl shadow-md transition-all gap-2" 
+            onClick={() => window.print()}
+          >
+            <Printer className="w-4 h-4" />
             Print Report
           </Button>
         </div>
       </div>
 
-      {/* ANALYTICS CHARTS (Replacing Stats Grid) */}
+      {/* ANALYTICS CHARTS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-white/10 bg-[#09090b]/60 backdrop-blur-xl shadow-2xl">
-          <CardHeader className="border-b border-white/5 bg-white/[0.02] p-4">
-            <CardTitle className="text-xs font-black tracking-[0.2em] uppercase flex items-center gap-2 text-indigo-400">
-              <BarChart3 className="w-4 h-4" /> Monthly Collection Comparison
+        <Card className="border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/60 px-5 py-3.5">
+            <CardTitle className="text-xs font-black tracking-wider uppercase flex items-center gap-2 text-[#1e3a8a]">
+              <BarChart3 className="w-4 h-4 text-[#1e3a8a]" /> Monthly Collection Comparison
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 h-[250px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={getMonthlyData()} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                <XAxis dataKey="month" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `Rs.${(value / 1000000).toFixed(1)}M`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <XAxis dataKey="month" stroke="#64748b" fontSize={11} font-bold tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748b" fontSize={11} font-bold tickLine={false} axisLine={false} tickFormatter={(value) => `Rs.${(value / 1000000).toFixed(1)}M`} />
                 <Tooltip
-                  cursor={{ fill: '#ffffff05' }}
-                  contentStyle={{ backgroundColor: '#09090b', borderColor: '#ffffff20', borderRadius: '8px' }}
+                  cursor={{ fill: 'rgba(30, 58, 138, 0.04)' }}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', color: '#0f172a', fontWeight: 'bold' }}
                   formatter={(value: number) => [`Rs. ${formatCurrency(value)}`, '']}
                 />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
-                <Bar dataKey="wsc" name="W&S" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="iacc" name="Arrears" fill="#f59e0b" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="wtr" name="Tanker" fill="#10b981" radius={[4, 4, 0, 0]} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                <Bar dataKey="wsc" name="W&S" fill="#1e3a8a" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="iacc" name="Arrears" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="wtr" name="Tanker" fill="#10b981" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card className="border-white/10 bg-[#09090b]/60 backdrop-blur-xl shadow-2xl">
-          <CardHeader className="border-b border-white/5 bg-white/[0.02] p-4">
-            <CardTitle className="text-xs font-black tracking-[0.2em] uppercase flex items-center gap-2 text-emerald-400">
-              <Activity className="w-4 h-4" /> Daily Trend (W&S Collection)
+        <Card className="border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition-all rounded-2xl overflow-hidden">
+          <CardHeader className="border-b border-slate-100 bg-slate-50/60 px-5 py-3.5">
+            <CardTitle className="text-xs font-black tracking-wider uppercase flex items-center gap-2 text-[#1e3a8a]">
+              <Activity className="w-4 h-4 text-[#1e3a8a]" /> Daily Trend (W&S Collection)
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 h-[250px]">
@@ -191,19 +207,19 @@ const RestrictedDashboard = () => {
               <AreaChart data={[...records].reverse()} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorWsc" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#1e3a8a" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#1e3a8a" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
-                <XAxis dataKey="entry_date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} minTickGap={30} />
-                <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(value) => `Rs.${(value / 1000000).toFixed(1)}M`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <XAxis dataKey="entry_date" stroke="#64748b" fontSize={11} font-bold tickLine={false} axisLine={false} minTickGap={30} />
+                <YAxis stroke="#64748b" fontSize={11} font-bold tickLine={false} axisLine={false} tickFormatter={(value) => `Rs.${(value / 1000000).toFixed(1)}M`} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#09090b', borderColor: '#ffffff20', borderRadius: '8px' }}
-                  labelStyle={{ color: '#888' }}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', color: '#0f172a', fontWeight: 'bold' }}
+                  labelStyle={{ color: '#1e3a8a', fontWeight: 'bold' }}
                   formatter={(value: number) => [`Rs. ${formatCurrency(value)}`, 'W&S Collection']}
                 />
-                <Area type="monotone" dataKey="wsc" stroke="#0ea5e9" strokeWidth={2} fillOpacity={1} fill="url(#colorWsc)" />
+                <Area type="monotone" dataKey="wsc" stroke="#1e3a8a" strokeWidth={2.5} fillOpacity={1} fill="url(#colorWsc)" />
               </AreaChart>
             </ResponsiveContainer>
           </CardContent>
@@ -213,11 +229,11 @@ const RestrictedDashboard = () => {
       {/* MAIN CONTENT AREA - SECOND IMAGE DESIGN */}
       <div id="printable-section" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="text-center hide-on-print">
-           <h2 className="text-sky-500 text-sm font-black tracking-[0.2em] uppercase mb-2">Recorded Collection Statement</h2>
+           <h2 className="text-[#1e3a8a] text-xs font-black tracking-[0.2em] uppercase mb-2">Recorded Collection Statement</h2>
         </div>
 
         {/* MONTHLY SUMMARY CARD */}
-        <div className="bg-white rounded-xl overflow-hidden shadow-2xl p-4 sm:p-6 overflow-x-auto">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all p-4 sm:p-6 overflow-x-auto">
           <div style={{textAlign: 'center', textDecoration: 'underline', marginBottom: '15px', fontSize: '13pt', fontWeight: 'bold', color: 'black'}}>
             DAILY COLLECTION STATEMENT W.E.F. {records.length > 0 ? records[records.length-1].entry_date : ''} TO {records.length > 0 ? records[0].entry_date : ''}
           </div>
@@ -296,7 +312,7 @@ const RestrictedDashboard = () => {
         </div>
 
         {/* DAILY SUMMARY CARD */}
-        <div className="bg-white rounded-xl overflow-hidden shadow-2xl p-4 sm:p-6 overflow-x-auto">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all p-4 sm:p-6 overflow-x-auto">
           <div style={{textAlign: 'center', textDecoration: 'underline', marginBottom: '15px', fontSize: '13pt', fontWeight: 'bold', color: 'black'}}>
             COLLECTION AS ON &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {records.length > 0 ? records[0].entry_date : ''}
           </div>

@@ -199,8 +199,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     <Link to={item.to} className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative overflow-hidden font-bold text-sm",
                       active 
-                        ? "bg-white text-[#1e3a8a] shadow-md" 
-                        : "text-white hover:text-white hover:bg-white/15"
+                        ? "sidebar-active-link bg-white text-[#1e3a8a] shadow-md" 
+                        : "sidebar-inactive-link text-white hover:text-white hover:bg-white/15"
                     )}>
                       <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", active ? "text-[#1e3a8a]" : "text-white")} />
                       {!collapsed && <span>{item.label}</span>}
@@ -242,8 +242,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                             <Link to={item.to} className={cn(
                               "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group relative overflow-hidden font-bold text-sm",
                               active 
-                                ? "bg-white text-[#1e3a8a] shadow-md" 
-                                : "text-white hover:text-white hover:bg-white/15"
+                                ? "sidebar-active-link bg-white text-[#1e3a8a] shadow-md" 
+                                : "sidebar-inactive-link text-white hover:text-white hover:bg-white/15"
                             )}>
                               <item.icon className={cn("w-4 h-4 shrink-0 transition-colors", active ? "text-[#1e3a8a]" : "text-white")} />
                               {!collapsed && <span>{item.label}</span>}
@@ -308,8 +308,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                             <Link key={item.to} to={item.to} className={cn(
                               "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative font-bold text-sm",
                               active 
-                                ? "bg-white text-[#1e3a8a] shadow-md" 
-                                : "text-white hover:text-white hover:bg-white/15"
+                                ? "sidebar-active-link bg-white text-[#1e3a8a] shadow-md" 
+                                : "sidebar-inactive-link text-white hover:text-white hover:bg-white/15"
                             )}>
                               <item.icon className={cn("w-5 h-5 shrink-0", active ? "text-[#1e3a8a]" : "text-white")} />
                               <span>{item.label}</span>
@@ -337,8 +337,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                                 <Link key={item.to} to={item.to} className={cn(
                                   "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group relative font-bold text-sm",
                                   active 
-                                    ? "bg-white text-[#1e3a8a] shadow-md" 
-                                    : "text-white hover:text-white hover:bg-white/15"
+                                    ? "sidebar-active-link bg-white text-[#1e3a8a] shadow-md" 
+                                    : "sidebar-inactive-link text-white hover:text-white hover:bg-white/15"
                                 )}>
                                   <item.icon className={cn("w-4 h-4 shrink-0", active ? "text-[#1e3a8a]" : "text-white")} />
                                   <span>{item.label}</span>

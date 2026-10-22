@@ -427,7 +427,7 @@ html:not(.dark):not(.landing-dark) {
   /* ─── SIDEBAR & MOBILE SHEET: Force white text on #1e3a8a dark background ─── */
   /* These rules MUST come after the global text-white override above */
 
-  /* Base: all text in aside/sheet-content is white */
+  /* Base: all text in aside/sheet-content is pure white */
   aside,
   aside *,
   .sheet-content,
@@ -435,34 +435,34 @@ html:not(.dark):not(.landing-dark) {
     color: #ffffff !important;
   }
 
-  /* Active link: white bg + blue text */
-  aside a.bg-white,
-  aside a[class*="bg-white "],
-  aside a[class*=" bg-white"],
-  .sheet-content a.bg-white,
-  .sheet-content a[class*="bg-white "],
-  .sheet-content a[class*=" bg-white"] {
+  /* Active link: white bg + blue text ONLY */
+  aside a.sidebar-active-link,
+  .sheet-content a.sidebar-active-link {
     background-color: #ffffff !important;
     color: #1e3a8a !important;
   }
-  aside a.bg-white *,
-  aside a[class*="bg-white "] *,
-  aside a[class*=" bg-white"] *,
-  .sheet-content a.bg-white *,
-  .sheet-content a[class*="bg-white "] *,
-  .sheet-content a[class*=" bg-white"] * {
+  aside a.sidebar-active-link *,
+  .sheet-content a.sidebar-active-link * {
     color: #1e3a8a !important;
   }
 
+  /* Inactive link: always pure white */
+  aside a.sidebar-inactive-link,
+  aside a.sidebar-inactive-link *,
+  .sheet-content a.sidebar-inactive-link,
+  .sheet-content a.sidebar-inactive-link * {
+    color: #ffffff !important;
+  }
+
   /* Active indicator shadow */
-  aside a.shadow-md,
-  .sheet-content a.shadow-md {
+  aside a.sidebar-active-link,
+  .sheet-content a.sidebar-active-link {
     box-shadow: 0 4px 6px -1px rgba(0,0,0,0.15) !important;
   }
 
-  /* Inactive link hover: slight white overlay */
-  aside a:not([class*="bg-white"]):hover,
-  .sheet-content a:not([class*="bg-white"]):hover {
+  /* Inactive link hover: slight white overlay and stays white text */
+  aside a.sidebar-inactive-link:hover,
+  .sheet-content a.sidebar-inactive-link:hover {
     background-color: rgba(255,255,255,0.15) !important;
     color: #ffffff !important;
   }
