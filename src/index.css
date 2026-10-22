@@ -928,8 +928,9 @@ input[type="date"]:hover::-webkit-calendar-picker-indicator {
   body * {
     visibility: hidden;
   }
-  .print-only, .print-only * {
-    visibility: visible;
+  .print-only, .print-only *,
+  .qr-ticket-printable, .qr-ticket-printable * {
+    visibility: visible !important;
   }
   .print-only {
     position: absolute;

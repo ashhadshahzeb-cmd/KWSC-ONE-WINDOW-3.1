@@ -1628,10 +1628,20 @@ export default function FileTracking() {
     document.body.classList.add('printing-qr-ticket');
     setTimeout(() => {
       window.print();
-      document.body.classList.remove('printing-qr-ticket');
-      setIsPrintingQR(false);
-    }, 250);
+    }, 300);
   };
+
+  useEffect(() => {
+    const handleAfterPrint = () => {
+      document.body.classList.remove('printing-qr-ticket');
+      document.body.classList.remove('thermal-mode');
+      setIsPrintingQR(false);
+      setIsPrintingQRMinimal(false);
+      setIsPrintingCovering(false);
+    };
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, []);
 
   const handlePrintQRMinimal = () => {
     setIsPrintingQRMinimal(true);

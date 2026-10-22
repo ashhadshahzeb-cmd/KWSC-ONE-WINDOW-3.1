@@ -547,9 +547,9 @@ export default function ActivityLog() {
   const getActionBadgeColor = (action: string) => {
     const severity = getActionSeverity(action);
     switch (severity) {
-      case 'critical': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-      case 'warning': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-      default: return 'bg-sky-500/10 text-sky-400 border-sky-500/20';
+      case 'critical': return 'bg-rose-50 text-rose-700 border-rose-300 font-bold';
+      case 'warning': return 'bg-amber-50 text-amber-700 border-amber-300 font-bold';
+      default: return 'bg-blue-50 text-[#1e3a8a] border-blue-200 font-bold';
     }
   };
 
@@ -619,14 +619,251 @@ export default function ActivityLog() {
   };
 
   const handlePrintQR = () => {
-    setIsPrintingQR(true);
-    document.body.classList.add('printing-qr-ticket');
-    setTimeout(() => {
-      window.print();
+    if (!qrPrintModal) return;
+
+    const printWin = window.open('', '_blank', 'width=500,height=750');
+    if (!printWin) {
+      toast.error('Pop-up blocked! Please allow pop-ups for this site to print.');
+      return;
+    }
+
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(
+      `${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`
+    )}&color=1e3a8a&margin=0`;
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Tracking Slip - ${qrPrintModal.receiving || qrPrintModal.diary}</title>
+          <style>
+            @page {
+              size: A5 portrait;
+              margin: 8mm;
+            }
+            * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              color: #0f172a;
+              background: #ffffff;
+              padding: 10px;
+              display: flex;
+              justify-content: center;
+            }
+            .ticket-container {
+              width: 100%;
+              max-width: 390px;
+              border: 2px solid #1e3a8a;
+              border-radius: 20px;
+              overflow: hidden;
+              position: relative;
+              background: #ffffff;
+            }
+            .header {
+              background: #1e3a8a;
+              color: #ffffff;
+              text-align: center;
+              padding: 18px 12px 14px;
+            }
+            .header h1 {
+              font-size: 16px;
+              font-weight: 900;
+              letter-spacing: 0.5px;
+              text-transform: uppercase;
+              margin-bottom: 2px;
+            }
+            .header p {
+              font-size: 10px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              opacity: 0.9;
+            }
+            .body {
+              padding: 16px;
+            }
+            .badge-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 8px;
+              margin-bottom: 14px;
+            }
+            .badge-box {
+              background: #f8fafc;
+              border: 1px solid #cbd5e1;
+              border-radius: 10px;
+              padding: 8px;
+              text-align: center;
+            }
+            .badge-label {
+              font-size: 8px;
+              font-weight: 800;
+              color: #1e3a8a;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 3px;
+            }
+            .badge-val {
+              font-size: 13px;
+              font-weight: 900;
+              font-family: monospace;
+              color: #0f172a;
+            }
+            .info-row {
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+              padding: 7px 0;
+              border-bottom: 1px solid #e2e8f0;
+            }
+            .info-label {
+              font-size: 8px;
+              font-weight: 700;
+              text-transform: uppercase;
+              color: #64748b;
+            }
+            .info-value {
+              font-size: 11px;
+              font-weight: 700;
+              color: #1e293b;
+              line-height: 1.3;
+            }
+            .qr-card {
+              margin-top: 14px;
+              padding: 14px;
+              background: #f8fafc;
+              border: 1px dashed #94a3b8;
+              border-radius: 16px;
+              text-align: center;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 6px;
+            }
+            .qr-image {
+              width: 140px;
+              height: 140px;
+              border: 3px solid #1e3a8a;
+              border-radius: 12px;
+              padding: 4px;
+              background: #ffffff;
+            }
+            .qr-title {
+              font-size: 11px;
+              font-weight: 900;
+              color: #1e3a8a;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+            }
+            .qr-code {
+              font-size: 10px;
+              font-family: monospace;
+              font-weight: 700;
+              color: #475569;
+            }
+            .watermark {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-35deg);
+              font-size: 60px;
+              font-weight: 900;
+              color: rgba(239, 68, 68, 0.12);
+              text-transform: uppercase;
+              pointer-events: none;
+              user-select: none;
+              white-space: nowrap;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="ticket-container">
+            ${isDuplicatePrint ? '<div class="watermark">DUPLICATE</div>' : ''}
+            <div class="header">
+              <h1>Official Tracking Slip</h1>
+              <p>Karachi Water & Sewerage Corporation</p>
+            </div>
+            <div class="body">
+              <div class="badge-grid">
+                <div class="badge-box">
+                  <div class="badge-label">CFO Diary No</div>
+                  <div class="badge-val">${qrPrintModal.diary || '—'}</div>
+                </div>
+                <div class="badge-box">
+                  <div class="badge-label">Receiving No</div>
+                  <div class="badge-val">${qrPrintModal.receiving || '—'}</div>
+                </div>
+              </div>
+
+              <div class="info-row">
+                <div class="info-label">Subject / Purpose</div>
+                <div class="info-value">${qrPrintModal.subject || 'N/A'}</div>
+              </div>
+
+              <div class="info-row">
+                <div class="info-label">Created Date</div>
+                <div class="info-value">${safeFormatDate(qrPrintModal.created_date)}</div>
+              </div>
+
+              <div class="info-row">
+                <div class="info-label">Printed Date</div>
+                <div class="info-value">${safeFormatDate(qrPrintModal.print_date)}</div>
+              </div>
+
+              <div class="info-row">
+                <div class="info-label">Forwarded To Section</div>
+                <div class="info-value" style="color: #1e3a8a; font-weight: 800;">
+                  ${getSectionName(qrPrintModal.mark_to)}
+                </div>
+              </div>
+
+              ${qrPrintModal.additional_mark_to ? `
+                <div class="info-row">
+                  <div class="info-label">Additional Mark To</div>
+                  <div class="info-value" style="color: #7c3aed; font-weight: 800;">
+                    ${getSectionName(qrPrintModal.additional_mark_to)}
+                  </div>
+                </div>
+              ` : ''}
+
+              <div class="qr-card">
+                <img class="qr-image" src="${qrUrl}" alt="Barcode QR" />
+                <div class="qr-title">Scan to Track Live</div>
+                <div class="qr-code">CODE: ${qrPrintModal.receiving || qrPrintModal.diary}</div>
+              </div>
+            </div>
+          </div>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 300);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWin.document.open();
+    printWin.document.write(htmlContent);
+    printWin.document.close();
+  };
+
+  useEffect(() => {
+    const handleAfterPrint = () => {
       document.body.classList.remove('printing-qr-ticket');
       setIsPrintingQR(false);
-    }, 250);
-  };
+    };
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, []);
 
 
 
@@ -915,10 +1152,10 @@ export default function ActivityLog() {
                               </div>
                             </TableCell>
                             <TableCell className="align-top py-4">
-                              <Badge className={`text-[9px] uppercase font-bold tracking-widest flex items-center gap-1.5 w-max border ${getActionBadgeColor(log.action)}`}>
+                              <span className={`text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border inline-flex items-center gap-1.5 shadow-xs ${getActionBadgeColor(log.action)}`}>
                                 {getActionIcon(log.action)}
                                 {log.action}
-                              </Badge>
+                              </span>
                             </TableCell>
                             <TableCell className="align-top py-4">
                               <div className="space-y-1">
@@ -1229,7 +1466,7 @@ export default function ActivityLog() {
               </div>
 
               {/* Header */}
-              <div className="bg-primary px-6 pt-8 pb-16 rounded-b-[40px] shadow-2xl relative overflow-hidden shrink-0">
+              <div className="bg-[#1e3a8a] px-6 pt-8 pb-16 rounded-b-[40px] shadow-2xl relative overflow-hidden shrink-0">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full -ml-10 -mb-10 blur-2xl"></div>
 
@@ -1239,25 +1476,25 @@ export default function ActivityLog() {
 
                 <div className="relative text-center space-y-1">
                   <h1 className="text-white text-xl font-black tracking-tighter uppercase">Verified Tracking</h1>
-                  <p className="text-primary-foreground/70 text-[10px] font-bold uppercase tracking-widest">Karachi Water Corporation</p>
+                  <p className="text-white/80 text-[10px] font-bold uppercase tracking-widest">Karachi Water Corporation</p>
                 </div>
               </div>
 
               {/* Main Content Card */}
               <div className="px-5 -mt-10 relative z-10 shrink-0">
                 <Card className="rounded-[30px] border-none shadow-xl overflow-hidden bg-white">
-                  <div className="p-1 bg-gradient-to-r from-emerald-500 to-primary"></div>
+                  <div className="p-1 bg-[#1e3a8a]"></div>
                   <CardContent className="pt-6 space-y-6">
 
                     {/* Tracking Numbers */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-primary/5 relative group overflow-hidden">
-                        <span className="text-[9px] font-black text-primary/50 uppercase tracking-[0.1em]">CFO Diary</span>
-                        <p className="text-sm font-black text-zinc-800 font-mono mt-1 tracking-tighter">{qrPrintModal.diary || '—'}</p>
+                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-[#1e3a8a]/20 relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-[#1e3a8a] uppercase tracking-[0.1em]">CFO Diary</span>
+                        <p className="text-sm font-black text-slate-900 font-mono mt-1 tracking-tighter">{qrPrintModal.diary || '—'}</p>
                       </div>
-                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-emerald-500/5 relative group overflow-hidden">
-                        <span className="text-[9px] font-black text-emerald-500/50 uppercase tracking-[0.1em]">Receiving No</span>
-                        <p className="text-sm font-black text-zinc-800 font-mono mt-1 tracking-tighter">{qrPrintModal.receiving || '—'}</p>
+                      <div className="bg-slate-50 rounded-2xl p-4 text-center border-2 border-emerald-500/20 relative group overflow-hidden">
+                        <span className="text-[9px] font-black text-emerald-700 uppercase tracking-[0.1em]">Receiving No</span>
+                        <p className="text-sm font-black text-slate-900 font-mono mt-1 tracking-tighter">{qrPrintModal.receiving || '—'}</p>
                       </div>
                     </div>
 
@@ -1315,11 +1552,11 @@ export default function ActivityLog() {
                     </div>
 
                     {/* QR Section */}
-                    <div className="mt-4 p-5 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-[30px] flex flex-col items-center gap-4 text-center shadow-inner print:bg-white print:border-none print:shadow-none">
-                      <div className="bg-white p-3 rounded-2xl shadow-xl border-4 border-[#0ea5e9]/20 flex flex-col items-center">
+                    <div className="mt-4 p-5 bg-slate-50 border border-slate-200 rounded-[30px] flex flex-col items-center gap-4 text-center">
+                      <div className="bg-white p-3 rounded-2xl shadow-sm border-2 border-[#1e3a8a]/20 flex flex-col items-center">
                         <div className="relative inline-flex items-center justify-center">
                           <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`)}&color=0ea5e9`}
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`${window.location.origin}/public-track/${qrPrintModal.diary || qrPrintModal.receiving}/${qrPrintModal.receiving || qrPrintModal.diary}`)}&color=1e3a8a`}
                             alt="QR"
                             className="w-28 h-28"
                           />
@@ -1328,15 +1565,15 @@ export default function ActivityLog() {
                             <img
                               src="/kwsc-watermark-logo.png"
                               alt="KWSC Watermark"
-                              className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-md border-2 border-blue-900/40"
+                              className="w-8 h-8 object-contain bg-white rounded-full p-0.5 shadow-md border-2 border-[#1e3a8a]/40"
                             />
                           </div>
                         </div>
-                        <span className="text-[8px] font-bold mt-2 text-zinc-600 uppercase text-center">Prepared by Engineer Tariq Zamir</span>
+                        <span className="text-[8px] font-bold mt-2 text-slate-600 uppercase text-center">Prepared by Engineer Tariq Zamir</span>
                       </div>
                       <div>
-                        <p className="text-primary text-sm font-black uppercase tracking-widest print:text-primary">Scan to Track Live</p>
-                        <p className="text-zinc-400 text-[10px] font-medium tracking-tight mt-1 print:text-zinc-400 font-mono">CODE: {qrPrintModal.receiving}</p>
+                        <p className="text-[#1e3a8a] text-sm font-black uppercase tracking-widest">Scan to Track Live</p>
+                        <p className="text-slate-500 text-[10px] font-bold tracking-tight mt-1 font-mono">CODE: {qrPrintModal.receiving}</p>
                       </div>
                     </div>
 
@@ -1370,10 +1607,12 @@ export default function ActivityLog() {
                         </div>
                       </div>
                       <Button
-                        className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl no-print"
+                        className="w-full bg-[#1e3a8a] hover:bg-[#172554] text-white font-bold rounded-xl no-print"
                         onClick={handlePrintQR}
+                        style={{ color: '#ffffff' }}
                       >
-                        <Printer className="w-4 h-4 mr-2" /> Print Tracking Slip
+                        <Printer className="w-4 h-4 mr-2" style={{ color: '#ffffff' }} />
+                        <span style={{ color: '#ffffff' }}>Print Tracking Slip</span>
                       </Button>
                     </div>
                   </CardContent>
