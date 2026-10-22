@@ -785,6 +785,9 @@ export default function ActivityLog() {
         </head>
         <body>
           <div class="ticket-container">
+            <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 5; overflow: hidden;">
+              <img src="/kwsc-watermark-logo.png" alt="KWSC Watermark" style="width: 300px; height: 300px; object-fit: contain; opacity: 0.22; filter: contrast(125%);" />
+            </div>
             ${isDuplicatePrint ? '<div class="watermark">DUPLICATE</div>' : ''}
             <div class="header">
               <h1>Official Tracking Slip</h1>
@@ -1487,7 +1490,7 @@ export default function ActivityLog() {
                 <img
                   src="/kwsc-watermark-logo.png"
                   alt="KWSC Watermark"
-                  className="w-[320px] h-[320px] object-contain opacity-[0.05] select-none print:opacity-[0.06]"
+                  className="w-[340px] h-[340px] object-contain opacity-[0.20] select-none filter contrast-125 print:opacity-[0.25]"
                 />
               </div>
 

@@ -6451,7 +6451,7 @@ export default function FileTracking() {
                   <img
                     src="/kwsc-watermark-logo.png"
                     alt="KWSC Watermark"
-                    className="w-[320px] h-[320px] object-contain opacity-[0.05] select-none print:opacity-[0.06]"
+                    className="w-[340px] h-[340px] object-contain opacity-[0.20] select-none filter contrast-125 print:opacity-[0.25]"
                   />
                 </div>
 
